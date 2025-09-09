@@ -1,0 +1,46 @@
+# =====================================================
+# TimescaleDB + pgvector + PL/Python (PostgreSQL 16)
+# Base: Debian (official Timescale image)
+# =====================================================
+
+FROM postgres:16-bullseye
+
+LABEL maintainer="EcoAnP Team"
+LABEL description="PostgreSQL 16 + TimescaleDB + Toolkit + pgvector + PL/Python"
+
+ENV TZ=Asia/Seoul
+
+# Install TimescaleDB + toolkit + pgvector + PL/Python
+RUN set -eux; \
+    apt-get update; \
+    DEBIAN_FRONTEND=noninteractive apt-get install -y --no-install-recommends \
+      curl ca-certificates gnupg wget \
+      git build-essential cmake pkg-config \
+      postgresql-server-dev-16 postgresql-plpython3-16; \
+    # Add timescale packagecloud repo via official script
+    curl -1sLf 'https://packagecloud.io/install/repositories/timescale/timescaledb/script.deb.sh' | bash; \
+    apt-get update; \
+    DEBIAN_FRONTEND=noninteractive apt-get install -y --no-install-recommends \
+      timescaledb-2-postgresql-16 timescaledb-toolkit-postgresql-16 postgresql-16-pgvector || true; \
+    # Fallback: build pgvector from source if package missing
+    if [ ! -e "/usr/lib/postgresql/16/lib/vector.so" ]; then \
+      cd /tmp && git clone --branch v0.5.1 https://github.com/pgvector/pgvector.git; \
+      cd /tmp/pgvector && make USE_PGXS=1 && make install USE_PGXS=1; \
+    fi; \
+    rm -rf /var/lib/apt/lists/* /tmp/pgvector || true
+
+# Copy PostgreSQL config and init scripts
+COPY postgresql.conf /etc/postgresql/postgresql.conf
+COPY init-extensions.sql /docker-entrypoint-initdb.d/01-init-extensions.sql
+COPY init-schema.sql /docker-entrypoint-initdb.d/02-init-schema.sql
+COPY init-timescale.sql /docker-entrypoint-initdb.d/03-init-timescale.sql
+
+RUN chown -R postgres:postgres /etc/postgresql/postgresql.conf \
+ && chmod 644 /etc/postgresql/postgresql.conf
+
+EXPOSE 5432
+
+HEALTHCHECK --interval=30s --timeout=10s --start-period=60s --retries=3 \
+  CMD pg_isready -U "$${POSTGRES_USER:-postgres}" -d "$${POSTGRES_DB:-postgres}" || exit 1
+
+CMD ["postgres", "-c", "config_file=/etc/postgresql/postgresql.conf"]

@@ -1,0 +1,37 @@
+services:
+  timescaledb:
+    build:
+      context: .
+      dockerfile: Dockerfile.timescaledb
+    container_name: ecoanp_timescaledb
+    restart: unless-stopped
+    command: ["postgres","-c","config_file=/etc/postgresql/postgresql.conf"]
+    environment:
+      POSTGRES_DB: ecoanp
+      POSTGRES_USER: ecoanp_user
+      POSTGRES_PASSWORD: ecoanp_password
+      POSTGRES_INITDB_ARGS: "--encoding=UTF8 --lc-collate=C --lc-ctype=C"
+    volumes:
+      - timescale_data:/var/lib/postgresql/data
+      - ./init-extensions.sql:/docker-entrypoint-initdb.d/01-init-extensions.sql
+      - ./init-schema.sql:/docker-entrypoint-initdb.d/02-init-schema.sql
+      - ./init-timescale.sql:/docker-entrypoint-initdb.d/03-init-timescale.sql
+    ports:
+      - "5432:5432"
+    networks:
+      - ecoanp_network
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ecoanp_user -d ecoanp"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 40s
+
+networks:
+  ecoanp_network:
+    driver: bridge
+    name: ecoanp_network
+
+volumes:
+  timescale_data:
+    driver: local

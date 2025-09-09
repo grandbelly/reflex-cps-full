@@ -1,0 +1,24 @@
+version: '3.8'
+
+services:
+  dagster-simple:
+    build:
+      context: .
+      dockerfile: ./Dockerfile_simple
+    container_name: dagster-simple
+    ports:
+      - "3001:3000"
+    environment:
+      DAGSTER_HOME: /opt/dagster/dagster_home
+    volumes:
+      - ./assets:/opt/dagster/dagster_home/assets  # 실시간 코드 동기화
+      - ./config:/opt/dagster/dagster_home/config
+    networks:
+      - ecoanp_network
+    env_file:
+      - ../.env
+    command: ["dagster", "dev", "-h", "0.0.0.0", "-p", "3000", "-w", "workspace.yaml"]
+
+networks:
+  ecoanp_network:
+    external: true

@@ -1,0 +1,20 @@
+FROM python:3.10-slim
+
+# 필요한 패키지들 설치
+RUN pip install \
+    dagster \
+    dagster-webserver \
+    psycopg[binary,pool] \
+    influxdb-client
+
+WORKDIR /opt/dagster/dagster_home
+
+# Python 경로 설정 - 이게 핵심!
+ENV PYTHONPATH=/opt/dagster/dagster_home
+
+# Copy workspace configuration
+COPY config/workspace.yaml .
+
+EXPOSE 3000
+
+CMD ["dagster", "dev", "-h", "0.0.0.0", "-p", "3000", "-w", "workspace.yaml"]

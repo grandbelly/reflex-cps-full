@@ -1,0 +1,39 @@
+version: '3.8'
+
+services:
+  node-red:
+    image: nodered/node-red:latest
+    container_name: ecoanp_node_red
+    restart: unless-stopped
+    environment:
+      - NODE_RED_ENABLE_PROJECTS=true
+      - NODE_RED_PROJECTS_PATH=/data/projects
+    volumes:
+      - ./node-red/data:/data
+      - ./node-red/settings:/data/settings
+      - ./node-red/flows:/data/flows
+      - ./node-red/nodes:/data/nodes
+      - ./node-red/projects:/data/projects
+    ports:
+      - "1880:1880"
+    networks:
+      - nodered_network
+    depends_on:
+      - timescaledb
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:1880/red"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 40s
+
+  timescaledb:
+    external: true
+    name: ecoanp_network
+
+networks:
+  nodered_network:
+    driver: bridge
+    name: nodered_network
+  ecoanp_network:
+    external: true

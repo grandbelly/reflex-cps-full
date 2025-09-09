@@ -1,0 +1,80 @@
+name: check-export
+env:
+  REFLEX_DEP: "git+https://github.com/reflex-dev/reflex.git@main"
+  REFLEX_TELEMETRY_ENABLED: false
+on:
+  push:
+    branches: [main]
+  pull_request:
+    branches: [main]
+  workflow_dispatch:
+    inputs:
+      reflex_dep:
+        description: "Reflex dep (raw pip spec)"
+
+jobs:
+  list-templates:
+    uses: ./.github/workflows/list-templates.yml
+
+  check-export:
+    needs: [list-templates]
+    strategy:
+      matrix:
+        folder: ${{ fromJSON(needs.list-templates.outputs.templates) }}
+      fail-fast: false
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          submodules: recursive
+      - uses: actions/setup-python@v5
+        with:
+          python-version: 3.10.16
+      - id: export-check
+        run: |
+          f=${{ matrix.folder }}
+          if [[ ! -d $f ]]; then
+            echo "$f is not a directory!"
+            exit 1
+          fi
+
+          cd "$f"
+
+          if [[ ! -f requirements.txt ]]; then
+            echo "requirements.txt is MISSING"
+            exit 1
+          fi
+
+          if !( grep -w "^reflex" requirements.txt >/dev/null 2>&1 ); then
+            echo "requirements.txt does not contain 'reflex'"
+            exit 1
+          fi
+
+          python -m venv venv
+          source venv/bin/activate
+
+          pip install '${{ github.event.inputs.reflex_dep || env.REFLEX_DEP }}' -r requirements.txt
+
+          export OPENAI_API_KEY="dummy"
+          reflex init
+          reflex export | tee export_logs.txt
+          for a in frontend.zip backend.zip; do
+            if unzip -t "$a"; then
+              echo "$a prepared as expected"
+            else
+              echo "ERROR: $a is not a valid zip file"
+              exit 1
+            fi
+          done
+
+      - name: Check for DeprecationWarning in logs
+        run: |
+          cd ${{ matrix.folder }}
+          dep_lines=$(grep -i "DeprecationWarning:" export_logs.txt || true)
+          if [ -n "$dep_lines" ]; then
+              echo "Found Deprecation warning:"
+              echo "$dep_lines"
+              exit 1
+          else
+              echo "No deprecated code, all good."
+          fi

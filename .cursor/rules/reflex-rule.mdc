@@ -1,0 +1,34 @@
+---
+description: Local Reflex app conventions (WSL + Recharts + Tailwind) for ksys_app
+globs:
+  - ksys_app/**
+alwaysApply: true
+---
+
+## UI Conventions
+
+- Use Tailwind V4 utility classes via `TailwindV4Plugin`. Avoid bespoke CSS.
+- Prefer `rx.el.*` primitives with clear `class_name` strings; keep styles colocated.
+- Use `rx.recharts` for live time-series; cap animation to keep CPU idle > 70%.
+- Keep components small and composable (<60 lines where possible).
+
+## State Conventions
+
+- Use `@rx.event(background=True)` for periodic/simulated updates; yield between loops.
+- Keep derived data in `@rx.var` properties (e.g., combined tables).
+- No blocking I/O in the UI thread; DB calls must be async and cached.
+
+## WSL Workflow
+
+- Activate WSL virtualenv: `source .venv/bin/activate` before `reflex run`.
+- Do not rely on Windows Python. All tooling runs inside WSL.
+- Only manage envs in the project root; remove stray envs (e.g., `.venv`, `ksys_env`, `reflex_env`).
+
+## Performance
+
+- First content < 2s; avoid heavy assets. Use lazy loading if needed.
+- Keep WebSocket payloads small; avoid sending unchanged data.
+
+## Testing
+
+- Add minimal unit tests for state reducers and derived selectors.

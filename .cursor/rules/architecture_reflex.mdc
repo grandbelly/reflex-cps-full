@@ -1,0 +1,48 @@
+---
+description: Reflex + TimescaleDB Architecture
+globs: 
+alwaysApply: true
+---
+# Project Architecture
+
+## Libraries
+
+Use the following libraries for specific functionalities:
+
+1. `reflex` (latest) — core dashboard framework.
+2. `psycopg[binary,pool]` — async PostgreSQL/Timescale driver with pooling.
+3. `rx.recharts` — preferred charting for this project (lightweight, responsive).
+4. `plotly` — optional charting for advanced visuals when needed.
+5. `pydantic` — models and validation.
+6. `statsmodels` or `prophet` — optional forecasting.
+7. `cachetools` — TTL and LRU caching for queries.
+8. `Tailwind V4` via `rx.plugins.TailwindV4Plugin()` — utility‑first styling.
+
+## Directory Structure
+
+```
+app.py                 # routes/pages
+rxconfig.py            # Reflex config
+db.py                  # connection pool + helpers
+models/                # Pydantic models, DTOs
+queries/               # SQL and query wrappers
+state/                 # rx.State subclasses
+views/                 # UI composition (dashboard, widgets)
+charts/                # plotly helpers
+utils/                 # cache, time, logging
+tests/                 # unit tests
+```
+
+## Data Flow
+
+TimescaleDB (views/caggs) → async query layer → Reflex State → UI Components (Recharts/Plotly) → Browser.
+
+For ksys_app: DB views/caggs → async query layer → Reflex State → UI Components (Recharts) → Browser. No simulation.
+
+## Deployment Targets
+
+- Dev (current): WSL2 + project `.venv` + `reflex run` on port 13000 for `ksys_app`. Access via Windows browser at `http://localhost:13000/`.
+- Dev (template): `ksys_web` on port 3000 for reference only.
+- Dev (DB): local Reflex + Docker TimescaleDB.
+- Staging: cloud Postgres/Timescale with read-only role.
+- Prod: Reflex on serverless or container + managed TimescaleDB.

@@ -1,0 +1,58 @@
+---
+description: New Feature Implementation Process for Reflex + TimescaleDB
+globs: 
+alwaysApply: false
+---
+# New Feature Implementation Process
+
+## Building Blocks
+
+1. `queries/*.py`: SQL queries using async `db.q()` wrapper.
+2. `models/*.py`: Pydantic models for query results.
+3. `state/*.py`: Reflex State with async load actions.
+4. `views/*.py`: UI composition with controls + chart.
+5. `charts/*.py`: Plotly chart definitions.
+
+## Steps
+
+1. Identify KPI, filters, time range, and aggregation bucket.
+2. Explore DB views/caggs via DB MCP; confirm columns and data types.
+3. Write SQL query with parameters, downsampling, and limits.
+4. Implement query wrapper returning list of dicts or model instances.
+5. Create Pydantic model matching query output.
+6. Add State class with:
+   - default filters
+   - async `load()` method
+   - `loading`, `data`, `error` states
+7. Create View function(s) rendering controls and chart.
+8. Wire into `app.py` as a new route.
+9. Deploy and audit with Browser MCP:
+   - Check load times, WebSocket messages, bundle sizes.
+   - Verify responsive layout.
+10. Write unit tests for SQL builder and State logic.
+
+## Example
+
+```python
+# queries/metrics.py
+from db import q
+
+async def metric_series(bucket: str, window: str, sensor_id: str):
+    sql = """
+    SELECT time_bucket(%s::interval, ts) AS bucket,
+           avg(value) AS avg_v
+    FROM analytics.v_sensor_5min
+    WHERE ts >= now() - %s::interval
+      AND sensor_id = %s
+    GROUP BY bucket
+    ORDER BY bucket
+    """
+    return await q(sql, (bucket, window, sensor_id))
+```
+
+## Testing
+
+- Use containerized TimescaleDB with seed data.
+- Verify query output matches model schema.
+- Test State loads with mocked DB calls.
+- Visual regression for chart if critical.

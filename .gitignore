@@ -1,0 +1,60 @@
+__pycache__/
+.web
+*.db
+.states
+assets/external/
+*.py[cod]
+
+# Windows Zone Information
+*Zone.Identifier
+*.Zone.Identifier
+**/*Zone.Identifier
+
+# NextJS
+nextjs-frontend/.next/
+nextjs-frontend/node_modules/
+nextjs-frontend/out/
+nextjs-frontend/.env.local
+nextjs-frontend/.env.development.local
+nextjs-frontend/.env.test.local
+nextjs-frontend/.env.production.local
+
+# Logs
+nextjs-frontend/npm-debug.log*
+nextjs-frontend/yarn-debug.log*
+nextjs-frontend/yarn-error.log*
+
+# Python virtual environment
+venv/
+.venv/
+env/
+.env/
+
+# Environment variables
+.env
+.env.local
+.env.production
+.env.development
+.env.encrypted
+
+# Security files
+.encryption_key
+*.key
+
+# Dagster
+dagster/dagster_home/
+dagster_home/
+*.db-shm
+*.db-wal
+
+# Database data files
+db/data/
+backups/
+
+# nul file
+nul
+
+# Temporary files
+*.tmp
+*.backup
+*.bak

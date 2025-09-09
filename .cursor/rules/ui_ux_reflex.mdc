@@ -1,0 +1,54 @@
+---
+description: UI/UX rules and prompting templates for Reflex (Tailwind V4 + rx.recharts)
+globs:
+  - ksys_web/**
+alwaysApply: false
+---
+
+## UI System
+- Tailwind V4 via `TailwindV4Plugin`; prefer utilities, avoid bespoke CSS.
+- Use `rx.el.*` primitives with `class_name`; keep styles colocated with components.
+- Responsive grid: `grid grid-cols-1 lg:grid-cols-3 gap-4 p-4` pattern (current app).
+
+## Navigation & Header
+- Tabs on left (wrap/scroll on small screens), controls on right.
+- Keep critical status (e.g., change% badge) lightweight.
+
+## Charting (rx.recharts)
+- Line chart for primary series; overlays for indicators.
+- Domain padding ~10%; tooltip with local time and formatted values.
+- Reduce animation to keep CPU idle > 70%.
+
+## Tables
+- Sticky header rows, zebra hover, compact text (`text-xs`/`text-sm`).
+- Right-align numeric columns; use conditional color for positive/negative.
+
+## States
+- Loading: skeleton blocks in cards.
+- Empty: short informative copies (no data / adjust filters).
+- Error: compact message + retry button.
+
+## Controls
+- time_range: 24h/7d/30d; derive bucket mapping (1m/10m/1h).
+- tag filter: input/select; debounce typing.
+
+## Performance & Payloads
+- First render < 2s; avoid images >300 KB; lazy load non-critical.
+- WebSocket messages < 50 KB avg; do not resend unchanged data.
+
+## Accessibility
+- Keyboard focus visible; aria labels on interactive controls.
+- Adequate contrast on dark theme (`bg-gray-900` / `text-gray-300`).
+
+## Prompting Quickstart (UI/UX)
+- “Refactor header to keep tabs scrollable on mobile; controls stack at `md` breakpoint.”
+- “Add loading/empty/error states for table + chart cards (skeletons + messages).”
+- “Implement rx.recharts overlay lines (SMA/Bollinger) with legend and color scheme.”
+- “Reduce tooltip noise; show local time and compact number formats.”
+
+## Review Checklist
+- Layout responsive at `sm/md/lg`.
+- Chart readable; tooltip concise; overlays toggleable.
+- Tables: sticky header and alignment correct.
+- States implemented (loading/empty/error).
+- Payload sizes and first render within budgets.

@@ -1,0 +1,35 @@
+version: '3.8'
+
+services:
+  timescaledb:
+    build:
+      context: .
+      dockerfile: Dockerfile.timescaledb
+    container_name: ecoanp_timescaledb
+    restart: unless-stopped
+    environment:
+      POSTGRES_DB: EcoAnP
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: admin
+      TZ: Asia/Seoul
+    ports:
+      - "5433:5432"  # 기존 DB와 포트 충돌 방지
+    volumes:
+      # 바인드 마운트로 DB 폴더 밑에서 직접 관리
+      - ./data/postgresql:/var/lib/postgresql/data
+      - ./backups:/backups
+      - ./init-extensions.sql:/docker-entrypoint-initdb.d/01-init-extensions.sql
+      - ./init-schema.sql:/docker-entrypoint-initdb.d/02-init-schema.sql
+      - ./logs:/var/lib/postgresql/log
+    networks:
+      - ecoanp_network
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U postgres -d EcoAnP"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 60s
+
+networks:
+  ecoanp_network:
+    driver: bridge

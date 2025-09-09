@@ -1,0 +1,42 @@
+---
+description: Reflex + TimescaleDB Common Guidelines
+globs: 
+alwaysApply: true
+---
+
+# Senior Developer Guidelines
+
+## Must
+
+- Always use `async` + connection pool for DB queries.
+- Always read from **views** or **continuous aggregates**.
+- Always parameterize SQL queries; never concatenate strings.
+- Always include `LIMIT` and `WHERE ts >= now() - interval %s` in time-series queries.
+- Always convert DB timestamps (UTC) to local (Asia/Seoul) in UI.
+- Always provide loading/empty/error states for widgets.
+- Always keep chart queries performant (< 300ms for 24h, < 1.2s for 30d).
+- Always cache query results for 15–60 seconds (metrics) or 5 minutes (lists).
+- Always keep functions < 60 lines and typed.
+
+## Solution Process
+
+1. Rephrase request into clear KPI and filters.
+2. Check available views/caggs via DB MCP.
+3. Draft parameterized SQL with correct time_bucket and downsampling.
+4. Implement query wrapper and pydantic model.
+5. Add Reflex State with async load method.
+6. Build UI with controls + chart.
+7. Deploy and audit with Browser MCP.
+8. Optimize and ship.
+
+## Performance Budgets
+
+- First chart render: < 2s wired, < 4s 4G.
+- WebSocket payload < 50KB avg.
+- CPU idle > 70% on low-end laptop.
+
+## Security
+
+- DB role read-only, limited to views.
+- Secrets via environment variables only.
+- Sanitize all inputs (pydantic validators).

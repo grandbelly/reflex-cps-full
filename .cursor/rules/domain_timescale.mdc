@@ -1,0 +1,393 @@
+---
+description: EcoAnP TimescaleDB domain model and business logic derived from view schemas
+globs:
+  - ksys_app/**
+alwaysApply: false
+---
+
+# EcoAnP Domain from TimescaleDB Views
+
+This document captures the domain entities, KPIs, and widget/query contracts based on the TimescaleDB view layers currently available on `192.168.1.80:5432/EcoAnP`.
+
+## Source and Access
+
+- Host: `192.168.1.80`
+- Port: `5432`
+- Database: `EcoAnP`
+- Role: `postgres` (use a read-only role in production)
+- SSL: local LAN (use `sslmode=disable` if server has no TLS)
+
+Example DSN (LAN, no TLS):
+
+```text
+postgresql://postgres:***@192.168.1.80:5432/EcoAnP?sslmode=disable
+```
+
+## Inventory Summary (discovered)
+
+Schemas and view-like objects relevant to the app:
+
+- `public.features_5m` — 5‑minute feature rollups per `tag_name` with statistics
+  - Columns: `bucket timestamptz`, `tag_name text`, `mean_5m float8`, `std_5m float8`, `min_5m float8`, `max_5m float8`, `p10_5m float8`, `p90_5m float8`, `n_5m bigint`
+- `public.influx_agg_1m` — 1‑minute aggregates per `tag_name`
+  - Columns: `bucket timestamptz`, `tag_name text`, `n bigint`, `avg float8`, `sum float8`, `min float8`, `max float8`, `last float8`, `first float8`, `diff float8`
+- `public.influx_agg_10m` — 10‑minute aggregates per `tag_name`
+  - Columns: same as 1m with 10‑minute buckets
+- `public.influx_agg_1h` — 1‑hour aggregates per `tag_name`
+  - Columns: same as 1m with hourly buckets
+- `public.influx_latest` — latest value per `tag_name`
+  - Columns: `tag_name text`, `value float8`, `ts timestamptz`
+- `public.tech_ind_1m_mv` — 1‑minute technical indicators (materialized view)
+  - Columns: `bucket timestamptz`, `tag_name text`, `avg float8`, `sma_10 float8`, `sma_60 float8`, `bb_top float8?`, `bb_bot float8?`, `slope_60 float8?`
+
+Note: system schemas and Timescale metadata views are omitted from domain scope.
+
+Sample values observed indicate tags such as `D100`, `D101`, ... with zeros or constant 100s used (likely test/seed data).
+
+## Domain Entities (inferred)
+
+- **Tag**
+  - Identity: `tag_name`
+  - Attributes: latest value/time from `public.influx_latest`
+- **MetricSeries** (base time-series signal)
+  - Keys: `(bucket, tag_name)`
+  - Variants:
+    - `influx_agg_1m`/`10m`/`1h` with columns: `n`, `avg`, `sum`, `min`, `max`, `last`, `first`, `diff`
+  - Semantics: rollups of raw points; choose resolution based on time window
+- **FeatureWindow5m**
+  - Keys: `(bucket, tag_name)`
+  - Columns: `mean_5m`, `std_5m`, `min_5m`, `max_5m`, `p10_5m`, `p90_5m`, `n_5m`
+  - Semantics: distributional features for anomaly/range dashboards
+- **TechIndicator1m**
+  - Keys: `(bucket, tag_name)`
+  - Columns: `avg`, `sma_10`, `sma_60`, `bb_top`, `bb_bot`, `slope_60`
+  - Semantics: momentum/volatility signals for alerts and overlays
+
+Relations:
+
+- `Tag 1 - N MetricSeries`
+- `Tag 1 - N FeatureWindow5m`
+- `Tag 1 - N TechIndicator1m`
+
+All time columns are UTC (`timestamptz`). Convert to Asia/Seoul at the UI edge.
+
+## Events and KPIs
+
+- Events: changes in `avg`/`last` or band crossings (e.g., `avg > bb_top`, `avg < bb_bot`), trend events from `slope_60` sign changes.
+- KPIs:
+  - Availability: share of minutes with `n > 0` per tag in a window
+  - Stability: `std_5m` thresholds
+  - Drift: `diff` cumulative over window; `avg` vs `sma_60` deviation
+  - Range compliance: `min/max` within expected bounds; `p10/p90` spread
+
+## Query Contracts (Reflex widgets)
+
+Shared constraints:
+
+- Read only from `public` view/materialized view layer above
+- Parameterized SQL only; return UTC timestamps
+- Support `time_range` (interval), resolution `bucket` (align to 1m/10m/1h), `filters` (`tag_name` list)
+- Add safe `LIMIT` for lists
+
+Examples:
+
+1) Timeseries (adaptive resolution)
+
+```sql
+-- Python decides which view based on window (<=24h → 1m, 24h–7d → 10m, >7d → 1h)
+SELECT bucket, tag_name, avg, min, max
+FROM public.influx_agg_1m
+WHERE bucket >= now() - $1::interval
+  AND ($2::text IS NULL OR tag_name = $2)
+ORDER BY bucket
+LIMIT 10000;
+```
+
+2) Latest snapshot
+
+```sql
+SELECT tag_name, value, ts
+FROM public.influx_latest
+WHERE ($1::text IS NULL OR tag_name = $1)
+ORDER BY tag_name
+LIMIT 1000;
+```
+
+3) 5‑minute feature table
+
+```sql
+SELECT bucket, tag_name, mean_5m, std_5m, min_5m, max_5m, p10_5m, p90_5m, n_5m
+FROM public.features_5m
+WHERE bucket >= now() - $1::interval
+  AND ($2::text IS NULL OR tag_name = $2)
+ORDER BY bucket
+LIMIT 10000;
+```
+
+4) Technical indicators overlay (1m)
+
+```sql
+SELECT bucket, tag_name, avg, sma_10, sma_60, bb_top, bb_bot, slope_60
+FROM public.tech_ind_1m_mv
+WHERE bucket >= now() - $1::interval
+  AND ($2::text IS NULL OR tag_name = $2)
+ORDER BY bucket
+LIMIT 10000;
+```
+
+Widget props:
+
+- `time_range`: e.g., `24 hours`, `7 days`, `30 days`
+- `bucket`: `1 minute | 10 minutes | 1 hour` (maps to view choice)
+- `filters`: `{ tag_name?: string }`
+
+Loading/empty/error states required for each widget.
+
+## Performance & Caching
+
+- Targets: < 300 ms for 24h, < 1.2 s for 30d windows
+- Use in‑memory TTL cache (15–60 s for metrics; 5 min for lists)
+- Keep WebSocket payloads < 50 KB avg; avoid resending unchanged points
+
+## Security
+
+- Use a read‑only DB role with `SELECT` on `public` views/materialized views
+- Enforce `statement_timeout` at session level
+- Secrets via environment variables only
+
+## Observability
+
+- Log query fingerprint, duration, rowcount per widget
+- Record cache hits/misses
+
+## Inventory Extraction (optional; for future sync)
+
+Run the following in WSL to export the view inventory and sample data. Replace the password as needed. These files will be used to auto-fill this document.
+
+```bash
+export PGPASSWORD="admin"
+PSQL_CONN="host=192.168.1.80 port=5432 dbname=EcoAnP user=postgres sslmode=disable"
+
+# 1) List SQL views
+psql "$PSQL_CONN" -c "\pset format json" -c "
+  SELECT table_schema, table_name
+  FROM information_schema.views
+  WHERE table_schema NOT IN ('pg_catalog','information_schema')
+  ORDER BY table_schema, table_name;
+" > views.json
+
+# 2) List materialized views (incl. potential caggs)
+psql "$PSQL_CONN" -c "\pset format json" -c "
+  SELECT schemaname AS table_schema, matviewname AS table_name
+  FROM pg_matviews
+  WHERE schemaname NOT IN ('pg_catalog','information_schema')
+  ORDER BY schemaname, matviewname;
+" > matviews.json
+
+# 3) List Timescale continuous aggregates
+psql "$PSQL_CONN" -c "\pset format json" -c "
+  SELECT view_schema, view_name, materialized, bucket_width, schedule_interval
+  FROM timescaledb_information.continuous_aggregates
+  ORDER BY view_schema, view_name;
+" > caggs.json
+
+# 4) Describe columns for all views (schema+name) into one CSV
+psql "$PSQL_CONN" -At -F, -c "
+  SELECT table_schema, table_name, column_name, data_type, is_nullable
+  FROM information_schema.columns
+  WHERE (table_schema, table_name) IN (
+    SELECT table_schema, table_name FROM information_schema.views
+    UNION ALL
+    SELECT schemaname, matviewname FROM pg_matviews
+  )
+  ORDER BY table_schema, table_name, ordinal_position;
+" > columns.csv
+
+# 5) Sample 10 rows per view (optional; may be large). Edit SCHEMAS as needed.
+SCHEMAS="public,analytics"
+mkdir -p samples
+psql "$PSQL_CONN" -At -F. -c "
+  SELECT table_schema||'.'||table_name FROM information_schema.views
+  WHERE table_schema = ANY(string_to_array('$SCHEMAS',','));
+" | while read -r v; do
+  echo "Sampling $v";
+  psql "$PSQL_CONN" -c "\pset footer off" -c "SELECT * FROM $v LIMIT 10;" > "samples/${v//./_}.txt";
+done
+```
+
+Once generated, attach or paste summaries; this doc will be updated accordingly.
+
+## Timescale Optimization and Policies
+
+### Current policy state (discovered)
+- Compression policy: `public.influx_hist` compress_after ≈ 7 days
+- Retention policy: `public.influx_hist` drop_after ≈ 365 days (1 year)
+- Continuous aggregate refresh policies:
+  - `public.influx_agg_1m`: schedule ~1 minute, start_offset ~2 hours, end_offset ~1 minute
+  - `public.influx_agg_10m`: schedule ~10 minutes, start_offset ~1 day, end_offset ~10 minutes
+  - `public.influx_agg_1h`: schedule ~1 hour, start_offset ~7 days, end_offset ~1 hour
+
+These align with a 1-year retention baseline.
+
+### Ensure 1‑year data retention
+Use either alter or remove+add. Recommended idempotent approach:
+
+```sql
+-- Inspect existing retention job
+SELECT job_id, config
+FROM timescaledb_information.jobs
+WHERE hypertable_schema='public' AND hypertable_name='influx_hist'
+  AND check_name='_timescaledb_functions.policy_retention_check';
+
+-- (Option A) Update retention job config to 365 days (Timescale 2.x+)
+-- NOTE: If alter_job/config is unsupported in your version, use Option B.
+SELECT alter_job(<job_id>, config => jsonb_set(coalesce(config,'{}'::jsonb), '{drop_after}', to_jsonb('365 days'::text), true));
+
+-- (Option B) Remove and re‑add retention policy
+SELECT remove_retention_policy('public.influx_hist');
+SELECT add_retention_policy('public.influx_hist', INTERVAL '365 days');
+```
+
+### Compression policy and settings
+Enable native compression with sensible settings for time‑series scans:
+
+```sql
+-- Enable compression + choose keys
+ALTER TABLE public.influx_hist
+  SET (timescaledb.compress,
+       timescaledb.compress_segmentby = 'tag_name',
+       timescaledb.compress_orderby   = 'time DESC');
+
+-- Add compression policy (7 days after chunk closes)
+SELECT add_compression_policy('public.influx_hist', INTERVAL '7 days');
+```
+
+### Recommended indexes
+
+```sql
+-- On base hypertable for point/range lookups
+CREATE INDEX IF NOT EXISTS ON public.influx_hist (tag_name, time DESC);
+```
+
+For continuous aggregates, index the materialization hypertables:
+
+```sql
+-- Look up materialization hypertable
+SELECT materialization_hypertable_schema, materialization_hypertable_name
+FROM timescaledb_information.continuous_aggregates
+WHERE view_schema='public' AND view_name='influx_agg_1m';
+
+-- Then add covering index
+CREATE INDEX IF NOT EXISTS ON <schema>.<mat_ht> (bucket, tag_name);
+```
+
+### Continuous aggregate definitions (reference)
+
+```sql
+-- 1m aggregation (reference)
+CREATE MATERIALIZED VIEW public.influx_agg_1m
+WITH (timescaledb.continuous) AS
+SELECT time_bucket('1 minute', time) AS bucket,
+       tag_name,
+       count(*) AS n,
+       avg(value) AS avg,
+       sum(value) AS sum,
+       min(value) AS min,
+       max(value) AS max,
+       last(value, time) AS last,
+       first(value, time) AS first,
+       last(value, time) - first(value, time) AS diff
+FROM public.influx_hist
+GROUP BY bucket, tag_name
+WITH NO DATA;
+
+-- Policy to refresh recent windows continuously
+SELECT add_continuous_aggregate_policy('public.influx_agg_1m',
+  start_offset => INTERVAL '2 hours',
+  end_offset   => INTERVAL '1 minute',
+  schedule_interval => INTERVAL '1 minute');
+
+-- 10m and 1h variants
+CREATE MATERIALIZED VIEW public.influx_agg_10m
+WITH (timescaledb.continuous) AS
+SELECT time_bucket('10 minutes', time) AS bucket, tag_name,
+       count(*) AS n, avg(value) AS avg, sum(value) AS sum,
+       min(value) AS min, max(value) AS max,
+       last(value, time) AS last, first(value, time) AS first,
+       last(value, time) - first(value, time) AS diff
+FROM public.influx_hist
+GROUP BY bucket, tag_name
+WITH NO DATA;
+
+SELECT add_continuous_aggregate_policy('public.influx_agg_10m',
+  start_offset => INTERVAL '1 day', end_offset => INTERVAL '10 minutes',
+  schedule_interval => INTERVAL '10 minutes');
+
+CREATE MATERIALIZED VIEW public.influx_agg_1h
+WITH (timescaledb.continuous) AS
+SELECT time_bucket('1 hour', time) AS bucket, tag_name,
+       count(*) AS n, avg(value) AS avg, sum(value) AS sum,
+       min(value) AS min, max(value) AS max,
+       last(value, time) AS last, first(value, time) AS first,
+       last(value, time) - first(value, time) AS diff
+FROM public.influx_hist
+GROUP BY bucket, tag_name
+WITH NO DATA;
+
+SELECT add_continuous_aggregate_policy('public.influx_agg_1h',
+  start_offset => INTERVAL '7 days', end_offset => INTERVAL '1 hour',
+  schedule_interval => INTERVAL '1 hour');
+```
+
+### Operational checks
+
+```sql
+-- Verify policies/jobs
+SELECT job_id, application_name, schedule_interval, config,
+       hypertable_schema, hypertable_name, check_schema, check_name
+FROM timescaledb_information.jobs
+ORDER BY job_id;
+
+-- Verify compression settings
+SELECT * FROM timescaledb_information.hypertable_compression_settings;
+```
+
+### Make retention policy durable (idempotent)
+Retention policies created via `add_retention_policy` are persisted in Timescale’s catalog and survive restarts. To enforce and keep it at 365 days in all environments, use an idempotent block:
+
+```sql
+DO $$
+DECLARE
+  v_job_id integer;
+BEGIN
+  SELECT job_id
+    INTO v_job_id
+  FROM timescaledb_information.jobs
+  WHERE hypertable_schema='public'
+    AND hypertable_name='influx_hist'
+    AND check_name='_timescaledb_functions.policy_retention_check'
+  LIMIT 1;
+
+  IF v_job_id IS NULL THEN
+    PERFORM add_retention_policy('public.influx_hist', INTERVAL '365 days');
+  ELSE
+    -- Try to update drop_after if supported; otherwise fallback to remove+add
+    BEGIN
+      PERFORM alter_job(v_job_id,
+        config => jsonb_set(coalesce(config,'{}'::jsonb), '{drop_after}', to_jsonb('365 days'::text), true));
+    EXCEPTION WHEN undefined_function THEN
+      PERFORM remove_retention_policy('public.influx_hist');
+      PERFORM add_retention_policy('public.influx_hist', INTERVAL '365 days');
+    END;
+  END IF;
+END $$;
+```
+
+Periodic verification (recommended at deploy/startup):
+```sql
+SELECT job_id, config
+FROM timescaledb_information.jobs
+WHERE hypertable_schema='public' AND hypertable_name='influx_hist'
+  AND check_name='_timescaledb_functions.policy_retention_check';
+```
+

@@ -1,0 +1,66 @@
+name: Zip and Publish Subfolders
+on:
+  release:
+    types: [published]
+  workflow_dispatch:
+    inputs:
+      version:
+        description: 'Version tag for the artifacts'
+        required: true
+        type: string
+jobs:
+  zip-and-publish:
+    runs-on: ubuntu-latest
+    outputs:
+      files: ${{ steps.list_zip_files.outputs.files }}
+    steps:
+      - name: Checkout code with submodules
+        uses: actions/checkout@v3
+        with:
+          submodules: recursive
+      - name: Create zip files for each subfolder
+        run: |
+          for dir in $(find . -mindepth 1 -maxdepth 1 -type d); do
+            zip -r "${dir##*/}.zip" "$dir"
+          done
+      - name: List zip files
+        id: list_zip_files
+        run: |
+          files=$(ls *.zip | jq -R . | jq -s . | tr -d '\n' | tr -d ' ')
+          echo "files=$files" >> $GITHUB_OUTPUT
+        shell: bash
+      - name: Upload zip files as artifacts
+        uses: actions/upload-artifact@v4
+        with:
+          name: zip-files
+          path: "*.zip"
+
+  upload-artifacts:
+    needs: zip-and-publish
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+    steps:
+      - name: Download zip files
+        uses: actions/download-artifact@v4
+        with:
+          name: zip-files
+      - name: Upload release assets
+        uses: softprops/action-gh-release@v2
+        with:
+          files: "*.zip"
+          tag_name: ${{ github.event.inputs.version || github.ref_name }}
+
+  upload-templates-json:
+    needs: upload-artifacts
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v2
+      - name: Upload templates.json as release asset
+        uses: softprops/action-gh-release@v2
+        with:
+          files: templates.json
+          tag_name: ${{ github.event.inputs.version || github.ref_name }}

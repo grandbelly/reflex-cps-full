@@ -1,0 +1,71 @@
+version: '3.8'
+
+services:
+  node-red:
+    image: nodered/node-red:latest
+    container_name: ecoanp_node_red
+    restart: unless-stopped
+    environment:
+      - TZ=Asia/Seoul
+      - NODE_RED_ENABLE_PROJECTS=true
+      - NODE_RED_ENABLE_SAFE_MODE=false
+    ports:
+      - "1880:1880"  # Node-RED 웹 인터페이스
+    volumes:
+      # 바인드 마운트로 Node-RED 데이터 영속성 보장
+      - ./data:/data
+      - ./flows:/data/flows
+      - ./settings:/data/settings
+      - ./nodes:/data/nodes
+      - ./projects:/data/projects
+    networks:
+      - ecoanp_node_red_network
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:1880/"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 60s
+    # 라즈베리파이 리소스 제한
+    deploy:
+      resources:
+        limits:
+          memory: 512M
+          cpus: '1.0'
+        reservations:
+          memory: 256M
+          cpus: '0.5'
+
+  # InfluxDB (기존 데이터 소스)
+  influxdb:
+    image: influxdb:1.8
+    container_name: ecoanp_influxdb
+    restart: unless-stopped
+    environment:
+      - INFLUXDB_DB=iot_data
+      - INFLUXDB_ADMIN_USER=admin
+      - INFLUXDB_ADMIN_PASSWORD=admin123
+      - INFLUXDB_USER=iot_user
+      - INFLUXDB_USER_PASSWORD=iot_pass
+      - TZ=Asia/Seoul
+    ports:
+      - "8086:8086"  # InfluxDB API
+    volumes:
+      - ./influxdb/data:/var/lib/influxdb
+      - ./influxdb/config:/etc/influxdb
+    networks:
+      - ecoanp_node_red_network
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8086/ping"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 30s
+
+networks:
+  ecoanp_node_red_network:
+    driver: bridge
+    ipam:
+      config:
+        - subnet: 172.20.0.0/16
+

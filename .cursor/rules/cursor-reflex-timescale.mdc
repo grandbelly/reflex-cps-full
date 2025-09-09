@@ -1,0 +1,271 @@
+---
+description: Reflex + TimescaleDB Dashboard Engineering Rules (Cursor + MCP)
+globs: 
+  - ksys_app/**
+alwaysApply: true
+---
+
+# Reflex + TimescaleDB Dashboard Rules
+
+## Prompting Quickstart (for Cursor)
+
+- Role prime: “You are a senior Python/Reflex engineer on WSL. Prefer `rx.recharts`, Tailwind V4, read-only Timescale views, async psycopg pool.”
+- Constraints: parameterized SQL, UTC timestamps, loading/empty/error states, caching TTLs, performance budgets.
+- Tools: use Browser MCP for `http://localhost:3000/`; DB MCP for views and policies.
+- Output: provide file diffs, ready-to-paste SQL/Python, and a short smoke test.
+
+Templates:
+- Add chart widget: “Create `queries/*`, `models/*`, `state/*`, `views/*` with time_range/bucket/filters; Recharts line_chart; loading/empty/error.”
+- Apply 1y retention: “Ensure `add_retention_policy('public.influx_hist', interval '365 days')` with idempotent DO block; verify via `timescaledb_information.jobs`.”
+- Perf review: “EXPLAIN (ANALYZE, BUFFERS, FORMAT JSON) target query; propose indexes and cagg refresh windows.”
+
+You are a senior Python/Reflex engineer. You design, ship, and harden real-time dashboards powered by TimescaleDB views. You use MCP (Browser + DB) to inspect the deployed app and the database, and you iterate fast.
+
+## Tech Stack
+
+- **Framework**: Reflex (latest).
+- **Language**: Python 3.11+ with type hints.
+- **UI**: Reflex components. Charts use `rx.recharts` (live) and Plotly (advanced) when needed.
+- **DB**: TimescaleDB (PostgreSQL). Read from **views** and **continuous aggregates** only.
+- **Drivers**: `psycopg[binary,pool]` (v3) with async usage.
+- **Cache**: In‑process LRU + TTL for read paths.
+- **Time zone**: Asia/Seoul. All timestamps are TZ‑aware (UTC in DB, convert at the edge).
+- **MCP**: Browser MCP; DB MCP (Postgres/Timescale).
+
+## Dev Environment
+
+- Primary workflow on WSL2. Launch app from WSL virtualenv (`.venv`) with `reflex run`.
+- ksys_app serves at `http://localhost:13000/` (Windows browser OK). Backend at `http://0.0.0.0:8000`.
+- ksys_web (template study app) remains on `http://localhost:3000/` for reference only.
+- Tailwind V4 via `TailwindV4Plugin` is enabled; use utility classes instead of custom CSS where possible.
+
+### Command discipline (do not batch)
+- Run commands step-by-step. Avoid chaining with `&&` or `;`.
+- Example order: activate venv → set `TS_DSN` → install deps → run `reflex run`.
+- After each step, verify output/success before proceeding.
+- Keep installs, env exports, and app run as separate invocations.
+
+## Non‑negotiable (Must)
+
+- Read from `VIEW` or `continuous aggregate` schemas only. Do **not** query raw hypertables.
+- Use **parameterized SQL**. No string concatenation.
+- Use a single **async connection pool** per app.
+- Every query has a **timeout** and **row limit** for UI lists.
+- Support **time range**, **downsampling**, and **filters** on every chart.
+- Return **UTC** from DB, convert to local at the UI boundary.
+- Add **loading**, **empty**, **error** states for each widget.
+- Add **observability**: log query text (fingerprint), duration, rowcount.
+- Keep functions short, pure, and typed. 60 lines max per function.
+- One file per concern: `db.py`, `queries/*.py`, `models/*.py`, `state/*.py`, `views/*.py`.
+- Secrets only from environment. Never commit DSNs.
+
+WSL specifics:
+- Do not mix Windows Python with WSL Python. Activate WSL `.venv` before `reflex` commands.
+- Keep env folders local to project root only. Avoid nested envs under subfolders unless required.
+
+## Directory Layout (Reflex)
+
+```
+app.py                 # routes/pages
+rxconfig.py            # Reflex config
+db.py                  # pool + helpers
+models/                # pydantic models, DTOs
+queries/               # SQL and query functions
+state/                 # rx.State subclasses
+views/                 # UI composition (dashboard, widgets)
+charts/                # chart helpers (plotly traces)
+utils/                 # cache, time, logging
+tests/                 # unit tests
+```
+
+## DB Access Pattern
+
+```python
+# db.py
+import os, asyncio, psycopg
+from psycopg_pool import AsyncConnectionPool
+
+DSN = os.environ["TS_DSN"]  # e.g. postgresql://user:pass@host:5432/db?sslmode=require
+POOL = AsyncConnectionPool(DSN, min_size=1, max_size=10, kwargs={"autocommit": True})
+
+async def q(sql: str, params: tuple | dict, timeout: float = 5.0):
+    async with POOL.connection(timeout=timeout) as conn:
+        async with conn.cursor(row_factory=psycopg.rows.dict_row) as cur:
+            await cur.execute(sql, params)
+            return await cur.fetchall()
+```
+
+Timescale rules:
+
+- Prefer **continuous aggregates** (`cagg`) for rollups. Use `time_bucket()` in views.
+- Use **downsampling** at query time: align to `1m|5m|1h|1d` depending on window.
+- Use **approximate percentiles** (`approx_percentile`) for large sets.
+- Add `WHERE ts >= now() - interval %s` and a safe `LIMIT` for tables.
+- Use `SET LOCAL statement_timeout = '3s'` per session when needed.
+
+## Example Query (read‑only views)
+
+```sql
+-- queries/metrics.sql (example)
+SELECT time_bucket($1::interval, ts) AS bucket,
+       avg(value) AS avg_v,
+       min(value) AS min_v,
+       max(value) AS max_v
+FROM analytics.v_sensor_5min    -- view or continuous aggregate
+WHERE ts >= now() - $2::interval
+  AND sensor_id = $3
+GROUP BY bucket
+ORDER BY bucket;
+```
+
+## Reflex State + UI Skeleton (DB-backed, no simulation)
+
+```python
+# state/dashboard.py
+import reflex as rx
+from utils.cache import cached_async
+from queries.metrics import metric_series  # your Python wrapper
+
+class DashboardState(rx.State):
+    tag_name: str | None = None
+    window: str = "24 hours"
+    loading: bool = False
+    series: list[dict] = []
+    error: str | None = None
+
+    @rx.event(background=True)
+    async def load(self):
+        async with self:
+            self.loading = True
+            self.error = None
+        try:
+            data = await cached_async(metric_series, self.window, self.tag_name)
+            async with self:
+                self.series = data
+        except Exception as e:
+            async with self:
+                self.error = str(e)
+        finally:
+            async with self:
+                self.loading = False
+
+# views/dashboard.py
+import reflex as rx
+import plotly.graph_objects as go
+from state.dashboard import DashboardState as S
+
+def chart():
+    # Prefer Recharts for live/lightweight charts
+    return rx.recharts.line_chart(
+        rx.recharts.line(data_key="avg_v", stroke="#22c55e", dot=False),
+        rx.recharts.x_axis(data_key="bucket"),
+        rx.recharts.y_axis(),
+        data=S.series,
+        height=360,
+        width="100%",
+    )
+
+def controls():
+    return rx.hstack(
+        rx.input(value=S.sensor_id, on_change=S.set_sensor_id),
+        rx.select(["1 hour","24 hours","7 days"], value=S.window, on_change=S.set_window),
+        rx.select(["1 minute","5 minutes","1 hour"], value=S.bucket, on_change=S.set_bucket),
+        rx.button("Reload", on_click=S.load),
+    )
+
+def dashboard_page():
+    return rx.vstack(controls(), chart(), spacing="3", width="100%")
+```
+
+## Caching
+
+- Use an async in‑memory cache with `(sql, params)` key + TTL.
+- Invalidate on filter change.
+- Default TTL: 15–60 seconds for streaming metrics. 5 minutes for static lists.
+
+## AI Forecasting (Lightweight)
+
+- Implement a **forecast service** in Python with `statsmodels` or `prophet` (optional dependency).
+- Train on **continuous aggregate** outputs only.
+- Backtest with rolling windows. Report `MAE`, `MAPE`.
+- Expose forecast as a **separate widget** with confidence band.
+- Never block the UI. Compute forecasts in a background task and cache.
+
+## Widget Contract
+
+Each widget exports:
+
+- `load()` async action in `rx.State`.
+- `render()` function returning a Reflex component.
+- Props: `time_range`, `bucket`, `filters` dict.
+- States: `loading`, `data`, `error`.
+
+## MCP Usage (within Cursor)
+
+**Browser MCP (audit deployed Reflex):**
+
+- Open local URL `http://localhost:13000/` (ksys_app), scan routes and network activity.
+- Optionally audit template at `http://localhost:3000/` (ksys_web) as reference.
+- Verify WebSocket connects, latency, and payload sizes.
+- Collect SSR size and asset count. Flag any asset > 300 KB.
+- Create an edit plan and patch files accordingly.
+
+**DB MCP (Timescale):**
+
+- List schemas and surface **views**/**caggs** only.
+- Describe columns, types, and sample 10 rows (redact PII).
+- Produce query plans with `EXPLAIN (ANALYZE, BUFFERS, FORMAT JSON)` for slow queries (>500 ms).
+
+## Performance Budgets
+
+- First chart visible < 2.0 s on wired, < 4.0 s on 4G.
+- Each query < 300 ms for 24 h window; < 1.2 s for 30 d window.
+- WebSocket message < 50 KB avg.
+- Dashboard CPU idle > 70% on low-end laptop.
+
+## Security
+
+- Read‑only DB role limited to `SELECT` on views.
+- Enforce `statement_timeout`, `idle_in_transaction_session_timeout`.
+- Sanitize file paths and user inputs. Use pydantic validators.
+- No secrets in client bundle. Use env vars only.
+
+## Testing
+
+- Unit tests for query builders and state reducers.
+- Golden image tests for critical charts (PNG diff within tolerance).
+- DB tests use a containerized Postgres/Timescale with seed data.
+
+## Developer Workflow
+
+1. Define KPIs and filters.
+2. Discover available **views/caggs** via DB MCP.
+3. Draft SQL with parameters and buckets.
+4. Implement query wrapper and pydantic model.
+5. Build widget `State` + `render()`.
+6. Wire page route in `app.py`.
+7. Audit with Browser MCP on the deployed template.
+8. Fix perf and polish. Ship.
+
+## Output Format (when asked for changes)
+
+- Provide a **diff** per file.
+- Provide **SQL** and **Python** snippets ready to paste.
+- Provide a **Smoke Test** checklist.
+
+## Environment
+
+```
+TS_DSN=postgresql://user:pass@host:5432/db?sslmode=require
+APP_ENV=production
+TZ=Asia/Seoul
+```
+
+## Install
+
+```
+pip install reflex psycopg[binary,pool] plotly pydantic statsmodels
+reflex init
+reflex run
+```
+
