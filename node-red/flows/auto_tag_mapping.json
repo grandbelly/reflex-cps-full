@@ -1,0 +1,88 @@
+[
+    {
+        "id": "auto_tag_tab",
+        "type": "tab",
+        "label": "자동 태그 매핑",
+        "disabled": false,
+        "info": "InfluxDB 메타데이터에서 자동으로 태그 매핑을 생성"
+    },
+    {
+        "id": "inject_auto_mapping",
+        "type": "inject",
+        "z": "auto_tag_tab",
+        "name": "태그 매핑 자동 생성",
+        "props": [{"p": "payload"}],
+        "repeat": "",
+        "crontab": "",
+        "once": true,
+        "onceDelay": 10,
+        "topic": "",
+        "payload": "create_mapping",
+        "payloadType": "str",
+        "x": 150,
+        "y": 100,
+        "wires": [["get_influx_schema"]]
+    },
+    {
+        "id": "get_influx_schema",
+        "type": "function",
+        "z": "auto_tag_tab",
+        "name": "InfluxDB 스키마 조회",
+        "func": "// InfluxDB 메타 버킷에서 스키마 정보 조회\nmsg.query = `\nfrom(bucket:\"5603a3eb-89e2-4e15-8cbb-60750c6588d3_meta\")\n  |> range(start: -90d)\n  |> filter(fn: (r) => r._measurement == \"schema\" and r._field == \"json\")\n  |> last()\n  |> keep(columns: [\"_value\"])\n`;\nreturn msg;",
+        "outputs": 1,
+        "x": 380,
+        "y": 100,
+        "wires": [["parse_schema"]]
+    },
+    {
+        "id": "parse_schema",
+        "type": "function",
+        "z": "auto_tag_tab",
+        "name": "스키마 파싱 및 SQL 생성",
+        "func": "// InfluxDB 스키마를 파싱하여 PostgreSQL INSERT SQL 생성\ntry {\n    if (!msg.payload || !Array.isArray(msg.payload) || msg.payload.length === 0) {\n        node.warn('스키마 데이터가 없습니다');\n        return null;\n    }\n    \n    const schemaJson = msg.payload[0]._value;\n    const schema = JSON.parse(schemaJson);\n    \n    if (!schema.RawDataColumns || !Array.isArray(schema.RawDataColumns)) {\n        node.warn('RawDataColumns가 없습니다');\n        return null;\n    }\n    \n    // PostgreSQL INSERT SQL 생성\n    const insertQueries = [];\n    \n    for (const column of schema.RawDataColumns) {\n        const { DataName, DataId, DataType } = column;\n        \n        const sql = `\n            INSERT INTO influx_tag (key, tag_id, tag_name, tag_type, unit, meta)\n            VALUES ('${DataName}', '${DataId}', '${DataName}', '${DataType.toLowerCase()}', 'V', '{\"auto_created\": true}')\n            ON CONFLICT (key) DO UPDATE SET\n                tag_id = EXCLUDED.tag_id,\n                tag_name = EXCLUDED.tag_name,\n                tag_type = EXCLUDED.tag_type,\n                updated_at = CURRENT_TIMESTAMP;\n        `.trim();\n        \n        insertQueries.push(sql);\n    }\n    \n    msg.payload = {\n        schema: schema.RawDataColumns,\n        queries: insertQueries,\n        count: insertQueries.length\n    };\n    \n    node.log(`✅ ${insertQueries.length}개 태그 매핑 SQL 생성 완료`);\n    return msg;\n    \n} catch (error) {\n    node.error('스키마 파싱 오류: ' + error.message);\n    return null;\n}",
+        "outputs": 1,
+        "x": 620,
+        "y": 100,
+        "wires": [["debug_parsed_schema", "execute_mapping_sql"]]
+    },
+    {
+        "id": "debug_parsed_schema",
+        "type": "debug",
+        "z": "auto_tag_tab",
+        "name": "파싱된 스키마",
+        "active": true,
+        "tosidebar": true,
+        "console": true,
+        "complete": "payload",
+        "targetType": "msg",
+        "x": 850,
+        "y": 60,
+        "wires": []
+    },
+    {
+        "id": "execute_mapping_sql",
+        "type": "function",
+        "z": "auto_tag_tab",
+        "name": "태그 매핑 SQL 실행",
+        "func": "// PostgreSQL에 태그 매핑 데이터 삽입\nif (!msg.payload || !msg.payload.queries || msg.payload.queries.length === 0) {\n    node.warn('실행할 SQL이 없습니다');\n    return null;\n}\n\n// 각 SQL을 개별적으로 실행\nconst results = [];\nfor (let i = 0; i < msg.payload.queries.length; i++) {\n    const newMsg = {\n        ...msg,\n        query: msg.payload.queries[i],\n        payload: [],\n        _msgid: msg._msgid + '_' + i\n    };\n    results.push(newMsg);\n}\n\nnode.log(`🚀 ${results.length}개 태그 매핑 SQL 실행 시작`);\nreturn [results];",
+        "outputs": 1,
+        "x": 620,
+        "y": 160,
+        "wires": [["debug_mapping_result"]]
+    },
+    {
+        "id": "debug_mapping_result",
+        "type": "debug",
+        "z": "auto_tag_tab",
+        "name": "매핑 결과",
+        "active": true,
+        "tosidebar": true,
+        "console": true,
+        "complete": "true",
+        "targetType": "full",
+        "x": 850,
+        "y": 160,
+        "wires": []
+    }
+]
+

@@ -1,0 +1,7 @@
+.git\
+.web\
+__pycache__\
+*.pyc
+dagster\dagster_home\
+nul
+*.Zone.Identifier

@@ -1,0 +1,207 @@
+[
+  {
+    "content": "역삼투(RO) 시스템의 최적 운전 압력은 일반적으로 55-70 bar 범위입니다. 해수 담수화의 경우 60-80 bar까지 상승할 수 있습니다.",
+    "content_type": "operational_spec",
+    "w5h1_data": {
+      "what": "RO 시스템 운전 압력 사양",
+      "why": "막 효율과 에너지 소비의 균형을 위해",
+      "when": "24시간 연속 운전 중",
+      "where": "RO 멤브레인 모듈",
+      "who": "운영팀",
+      "how": "압력 센서로 실시간 모니터링"
+    },
+    "metadata": {
+      "unit": "bar",
+      "min_value": 55,
+      "max_value": 80,
+      "optimal_range": "60-65"
+    },
+    "tags": ["RO", "pressure", "operation", "specification"],
+    "priority": 9,
+    "confidence_score": 0.95
+  },
+  {
+    "content": "멤브레인 플럭스 감소가 20% 이상 발생하면 화학 세정(CIP)이 필요합니다. 일반적으로 3-6개월 주기로 수행됩니다.",
+    "content_type": "maintenance",
+    "w5h1_data": {
+      "what": "멤브레인 화학 세정 기준",
+      "why": "막 성능 회복 및 수명 연장",
+      "when": "플럭스 20% 감소 시 또는 3-6개월마다",
+      "where": "CIP 시스템",
+      "who": "정비팀",
+      "how": "산/알칼리 순환 세정"
+    },
+    "metadata": {
+      "trigger_condition": "flux_reduction > 20%",
+      "frequency": "3-6 months",
+      "chemicals": ["citric_acid", "sodium_hydroxide", "EDTA"]
+    },
+    "tags": ["membrane", "cleaning", "CIP", "maintenance"],
+    "priority": 8,
+    "confidence_score": 0.92
+  },
+  {
+    "content": "전도도가 500 μS/cm를 초과하면 생산수 품질 기준을 벗어납니다. 즉시 원인 파악이 필요합니다.",
+    "content_type": "troubleshooting",
+    "w5h1_data": {
+      "what": "생산수 전도도 이상",
+      "why": "막 손상 또는 O-ring 누수 가능성",
+      "when": "전도도 > 500 μS/cm 감지 시",
+      "where": "생산수 라인",
+      "who": "운영자 즉시 대응",
+      "how": "1) 개별 막 점검 2) O-ring 확인 3) 압력 조정"
+    },
+    "metadata": {
+      "alert_level": "critical",
+      "threshold": 500,
+      "unit": "μS/cm",
+      "response_time": "immediate"
+    },
+    "tags": ["conductivity", "quality", "troubleshooting", "alert"],
+    "priority": 10,
+    "confidence_score": 0.98
+  },
+  {
+    "content": "에너지 회수 장치(ERD)는 브라인의 압력 에너지를 회수하여 전체 에너지 소비를 40-60% 절감할 수 있습니다.",
+    "content_type": "energy_optimization",
+    "w5h1_data": {
+      "what": "ERD 에너지 절감 효과",
+      "why": "운영비 절감 및 탄소 배출 감소",
+      "when": "연속 운전 중",
+      "where": "브라인 배출 라인",
+      "who": "에너지 관리팀",
+      "how": "압력 교환기 또는 터빈 방식"
+    },
+    "metadata": {
+      "savings_range": "40-60%",
+      "technology_types": ["pressure_exchanger", "turbocharger", "turbine"],
+      "roi_period": "2-3 years"
+    },
+    "tags": ["ERD", "energy", "efficiency", "cost_saving"],
+    "priority": 7,
+    "confidence_score": 0.90
+  },
+  {
+    "content": "SDI(Silt Density Index)는 15분 기준 3.0 이하로 유지해야 멤브레인 파울링을 방지할 수 있습니다.",
+    "content_type": "water_quality",
+    "w5h1_data": {
+      "what": "전처리 수질 기준 (SDI)",
+      "why": "멤브레인 파울링 방지",
+      "when": "전처리 후 측정",
+      "where": "RO 공급수 라인",
+      "who": "수질 관리팀",
+      "how": "SDI 측정 키트 사용"
+    },
+    "metadata": {
+      "parameter": "SDI15",
+      "max_value": 3.0,
+      "measurement_time": "15 minutes",
+      "frequency": "daily"
+    },
+    "tags": ["SDI", "pretreatment", "water_quality", "fouling"],
+    "priority": 8,
+    "confidence_score": 0.93
+  },
+  {
+    "content": "겨울철 수온 저하 시 막 투과도가 감소합니다. 수온 1°C 감소마다 투과도는 약 3% 감소합니다.",
+    "content_type": "seasonal_operation",
+    "w5h1_data": {
+      "what": "수온에 따른 투과도 변화",
+      "why": "물의 점도 증가로 인한 투과 저항 증가",
+      "when": "겨울철 (수온 < 15°C)",
+      "where": "전체 RO 시스템",
+      "who": "운영팀",
+      "how": "압력 보정 또는 온도 보상"
+    },
+    "metadata": {
+      "temperature_coefficient": -0.03,
+      "reference_temperature": 25,
+      "unit": "°C",
+      "compensation_method": "pressure_adjustment"
+    },
+    "tags": ["temperature", "permeability", "seasonal", "operation"],
+    "priority": 6,
+    "confidence_score": 0.88
+  },
+  {
+    "content": "안티스칼란트 주입량은 원수 수질에 따라 2-5 ppm 범위로 조절합니다. 과다 주입 시 막 오염을 유발할 수 있습니다.",
+    "content_type": "chemical_dosing",
+    "w5h1_data": {
+      "what": "안티스칼란트 주입 가이드",
+      "why": "스케일 형성 방지 및 막 보호",
+      "when": "연속 주입",
+      "where": "전처리 화학약품 주입 지점",
+      "who": "화학약품 관리팀",
+      "how": "정량 펌프로 자동 주입"
+    },
+    "metadata": {
+      "dosage_range": "2-5 ppm",
+      "calculation_basis": "feed_water_quality",
+      "overdose_risk": "membrane_fouling"
+    },
+    "tags": ["antiscalant", "chemical", "dosing", "scale_prevention"],
+    "priority": 7,
+    "confidence_score": 0.91
+  },
+  {
+    "content": "회수율(Recovery Rate)은 일반적으로 해수의 경우 35-50%, 기수의 경우 75-85%로 설정합니다.",
+    "content_type": "design_parameter",
+    "w5h1_data": {
+      "what": "시스템 회수율 설계 기준",
+      "why": "농축 한계 및 스케일 위험 관리",
+      "when": "시스템 설계 및 운영 시",
+      "where": "전체 RO 시스템",
+      "who": "설계 엔지니어",
+      "how": "단계별 농축도 계산"
+    },
+    "metadata": {
+      "seawater_recovery": "35-50%",
+      "brackish_recovery": "75-85%",
+      "calculation_method": "concentration_factor"
+    },
+    "tags": ["recovery", "design", "seawater", "brackish"],
+    "priority": 8,
+    "confidence_score": 0.94
+  },
+  {
+    "content": "차압(ΔP)이 초기 대비 15% 이상 증가하면 막 오염을 의심해야 합니다. 물리적 역세척 또는 화학 세정을 고려하세요.",
+    "content_type": "diagnostic",
+    "w5h1_data": {
+      "what": "차압 증가 진단 기준",
+      "why": "막 오염 조기 감지",
+      "when": "차압 15% 이상 증가 시",
+      "where": "각 RO 스테이지",
+      "who": "운영자",
+      "how": "압력 센서 모니터링 및 트렌드 분석"
+    },
+    "metadata": {
+      "threshold_percentage": 15,
+      "baseline": "initial_dp",
+      "action_required": ["backwash", "CIP"]
+    },
+    "tags": ["differential_pressure", "fouling", "diagnostic", "monitoring"],
+    "priority": 9,
+    "confidence_score": 0.96
+  },
+  {
+    "content": "바이오파울링 방지를 위해 염소계 또는 비염소계 살균제를 주기적으로 투입합니다. DBNPA는 0.5-2.0 ppm 농도로 효과적입니다.",
+    "content_type": "biofouling_control",
+    "w5h1_data": {
+      "what": "바이오파울링 제어 방법",
+      "why": "미생물 증식으로 인한 막 오염 방지",
+      "when": "주 2-3회 충격 투입",
+      "where": "전처리 시스템",
+      "who": "수질 관리팀",
+      "how": "DBNPA 또는 이산화염소 투입"
+    },
+    "metadata": {
+      "biocide_type": ["DBNPA", "chlorine_dioxide", "isothiazolone"],
+      "dosage_dbnpa": "0.5-2.0 ppm",
+      "frequency": "2-3 times per week",
+      "contact_time": "30-60 minutes"
+    },
+    "tags": ["biofouling", "biocide", "DBNPA", "pretreatment"],
+    "priority": 7,
+    "confidence_score": 0.89
+  }
+]

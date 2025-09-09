@@ -1,0 +1,216 @@
+{
+  "knowledge_framework": "5W1H",
+  "version": "1.0",
+  "categories": {
+    "sensor_alerts": {
+      "high_temperature": {
+        "what": {
+          "event": "온도 센서 임계값 초과",
+          "threshold": "85°C 이상",
+          "sensor_range": "D100-D199"
+        },
+        "why": {
+          "causes": [
+            "냉각 시스템 고장",
+            "과부하 운전",
+            "외부 열원 영향",
+            "센서 오작동"
+          ],
+          "root_cause_analysis": "열평형 분석 필요"
+        },
+        "when": {
+          "occurrence_pattern": "주로 오후 2-4시 피크 시간",
+          "response_time": "5분 이내 조치 필요",
+          "history_check": "최근 7일 이력 확인"
+        },
+        "where": {
+          "affected_areas": ["반응기", "열교환기", "배관 시스템"],
+          "sensor_locations": "프로세스 라인 전체",
+          "impact_scope": "하류 공정 영향 가능"
+        },
+        "who": {
+          "responsible": "운전팀 + 정비팀",
+          "notification": ["당직 책임자", "안전 관리자"],
+          "escalation": "30분 내 미해결 시 공장장 보고"
+        },
+        "how": {
+          "immediate_actions": [
+            "냉각수 유량 증가",
+            "부하 감소 운전",
+            "비상 냉각 시스템 가동"
+          ],
+          "troubleshooting": [
+            "냉각수 온도 확인",
+            "펌프 작동 상태 점검",
+            "열교환기 효율 확인"
+          ],
+          "prevention": "일일 냉각 시스템 점검 강화"
+        }
+      },
+      "low_pressure": {
+        "what": {
+          "event": "압력 센서 하한값 미달",
+          "threshold": "1 bar 미만",
+          "sensor_range": "D200-D299"
+        },
+        "why": {
+          "causes": [
+            "배관 누출",
+            "펌프 고장",
+            "밸브 오작동",
+            "필터 막힘"
+          ],
+          "root_cause_analysis": "압력 강하 구간 추적"
+        },
+        "when": {
+          "occurrence_pattern": "시동/정지 시 빈발",
+          "response_time": "즉시 조치",
+          "history_check": "최근 압력 트렌드 분석"
+        },
+        "where": {
+          "affected_areas": ["압력 용기", "배관 네트워크", "펌프 스테이션"],
+          "sensor_locations": "주요 압력 포인트",
+          "impact_scope": "전체 공정 중단 위험"
+        },
+        "who": {
+          "responsible": "기계팀",
+          "notification": ["운전팀", "안전팀"],
+          "escalation": "15분 내 조치 미완료 시 비상 대응팀"
+        },
+        "how": {
+          "immediate_actions": [
+            "해당 구역 격리",
+            "예비 펌프 가동",
+            "수동 밸브 조작"
+          ],
+          "troubleshooting": [
+            "육안 누출 검사",
+            "압력계 교차 확인",
+            "밸브 포지션 확인"
+          ],
+          "prevention": "주기적 압력 테스트 실시"
+        }
+      }
+    },
+    "maintenance_tasks": {
+      "sensor_calibration": {
+        "what": {
+          "task": "센서 캘리브레이션",
+          "scope": "모든 계측기",
+          "standard": "ISO 9001 준수"
+        },
+        "why": {
+          "purpose": "측정 정확도 유지",
+          "benefits": ["데이터 신뢰성 향상", "오경보 감소", "규제 준수"],
+          "consequences_if_skipped": "측정 오차 누적"
+        },
+        "when": {
+          "frequency": "분기별",
+          "best_time": "계획 정비 기간",
+          "duration": "센서당 30분"
+        },
+        "where": {
+          "locations": "현장 또는 계측실",
+          "equipment_needed": "교정 장비 세트",
+          "workspace": "청정 환경"
+        },
+        "who": {
+          "executor": "계측 전문 기술자",
+          "supervisor": "계측 팀장",
+          "certification": "교정 인증서 발급자"
+        },
+        "how": {
+          "procedure": [
+            "센서 분리 및 청소",
+            "영점 조정",
+            "스팬 조정",
+            "선형성 확인",
+            "문서화"
+          ],
+          "tools": ["표준 게이지", "교정기", "데이터 로거"],
+          "documentation": "교정 성적서 작성 및 보관"
+        }
+      }
+    },
+    "correlations": {
+      "temperature_pressure": {
+        "what": {
+          "relationship": "온도-압력 비례 관계",
+          "correlation_coefficient": 0.85,
+          "equation": "P = P0 * (1 + β*ΔT)"
+        },
+        "why": {
+          "physics": "이상기체 법칙",
+          "process_impact": "열팽창에 의한 압력 변화",
+          "significance": "공정 제어 핵심 파라미터"
+        },
+        "when": {
+          "validity": "정상 운전 조건",
+          "exceptions": "상변화 구간",
+          "update_frequency": "실시간 계산"
+        },
+        "where": {
+          "applicable_zones": ["반응기", "저장 탱크", "배관"],
+          "sensors_involved": ["D100-D199", "D200-D299"],
+          "boundary_conditions": "폐쇄 시스템"
+        },
+        "who": {
+          "monitoring": "자동 제어 시스템",
+          "analysis": "공정 엔지니어",
+          "decision_making": "운전 책임자"
+        },
+        "how": {
+          "calculation": "실시간 상관분석",
+          "visualization": "X-Y 산점도",
+          "control_strategy": "캐스케이드 제어 적용"
+        }
+      }
+    },
+    "troubleshooting_guides": {
+      "sensor_drift": {
+        "what": {
+          "problem": "센서 드리프트 현상",
+          "symptoms": "점진적 측정값 이탈",
+          "impact": "제어 정확도 저하"
+        },
+        "why": {
+          "causes": [
+            "센서 노화",
+            "오염물 축적",
+            "전기적 간섭",
+            "온도 영향"
+          ],
+          "mechanism": "센서 특성 변화"
+        },
+        "when": {
+          "detection": "트렌드 분석으로 발견",
+          "frequency": "6개월-1년 주기",
+          "critical_timing": "교정 주기 전"
+        },
+        "where": {
+          "common_locations": "가혹 환경 센서",
+          "check_points": "센서 하우징, 케이블, 커넥터",
+          "affected_systems": "해당 제어 루프"
+        },
+        "who": {
+          "detector": "데이터 분석팀",
+          "corrector": "계측 정비팀",
+          "approver": "품질 관리팀"
+        },
+        "how": {
+          "diagnosis": [
+            "이력 데이터 분석",
+            "교차 검증",
+            "현장 점검"
+          ],
+          "correction": [
+            "영점/스팬 재조정",
+            "센서 청소",
+            "필요시 교체"
+          ],
+          "prevention": "예측 정비 프로그램 적용"
+        }
+      }
+    }
+  }
+}

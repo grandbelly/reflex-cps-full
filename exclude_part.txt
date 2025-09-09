@@ -1,0 +1,13 @@
+.git\
+.web\
+__pycache__\
+*.pyc
+dagster\
+ksys_app\ai_engine\
+ksys_app\ml\
+ksys_app\components\ai_
+ksys_app\tests\test_hallucination
+ksys_app\tests\test_response_validator
+ksys_app\tests\test_w5h1
+nul
+*.Zone.Identifier

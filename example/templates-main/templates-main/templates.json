@@ -1,0 +1,191 @@
+{
+  "templates": [
+    {
+      "name": "blank",
+      "description": "A minimal template.",
+      "demo_url": "https://blank-template.reflex.run",
+      "hidden": false,
+      "reflex_build": false
+    },
+    {
+      "name": "dashboard",
+      "description": "A dashboard with tables and graphs.",
+      "demo_url": "https://dashboard-new.reflex.run/",
+      "hidden": false,
+      "reflex_build": false
+    },
+    {
+      "name": "sidebar",
+      "description": "A template with a sidebar to navigate pages.",
+      "demo_url": "https://sidebar-template.reflex.run",
+      "hidden": true,
+      "reflex_build": false
+    },
+    {
+      "name": "sales",
+      "description": "An app to manage sales and customers.",
+      "demo_url": "https://sales-new.reflex.run/",
+      "hidden": false,
+      "reflex_build": false
+    },
+    {
+      "name": "ai_image_gen",
+      "description": "An app to generate images using AI.",
+      "demo_url": "https://ai-image-gen.reflex.run/",
+      "hidden": false,
+      "reflex_build": false
+    },
+    {
+      "name": "ci_template",
+      "description": "A template for continuous integration.",
+      "demo_url": "https://cijob.reflex.run/",
+      "hidden": false,
+      "reflex_build": false
+    },
+    {
+      "name": "api_admin_panel",
+      "description": "An admin panel for an api.",
+      "demo_url": "https://api-admin-panel.reflex.run/",
+      "hidden": false,
+      "reflex_build": false
+    },
+    {
+      "name": "nba",
+      "description": "A data visualization app for NBA data.",
+      "demo_url": "https://nba-new.reflex.run/",
+      "hidden": false,
+      "reflex_build": false
+    },
+    {
+      "name": "customer_data_app",
+      "description": "An app to manage customer data.",
+      "demo_url": "https://customer-data-app.reflex.run/",
+      "hidden": false,
+      "reflex_build": false
+    },
+    {
+      "name": "reflex-chat",
+      "description": "A chat app built with Reflex.",
+      "hidden": false,
+      "reflex_build": false
+    },
+    {
+      "name": "reflex-llamaindex-template",
+      "description": "A template for LlamaIndex.",
+      "hidden": false,
+      "reflex_build": false
+    },
+    {
+      "name": "admin_dashboard",
+      "description": "An admin dashboard",
+      "demo_url": "https://admin-dashboard-aqua-apple.reflex.run/",
+      "hidden": false,
+      "reflex_build": true
+    },
+    {
+      "name": "retail_analytics_dashboard",
+      "description": "A retail analytics dashboard app.",
+      "demo_url": "https://retail-analytics-dashboard-teal-grass.reflex.run/",
+      "hidden": false,
+      "reflex_build": true
+    },
+    {
+      "name": "table_dashboard",
+      "description": "A table dashboard app.",
+      "demo_url": "https://table-dashboard-aqua-ring.reflex.run/",
+      "hidden": false,
+      "reflex_build": true
+    },
+    {
+      "name": "retention_dashboard",
+      "description": "A retention dashboard app.",
+      "demo_url": "https://retention-dashboard-lime-panda.reflex.run/",
+      "hidden": false,
+      "reflex_build": true
+    },
+    {
+      "name": "business_analytics_dashboard",
+      "description": "A business analytics dashboard.",
+      "demo_url": "https://business-analytics-dashboard-navy-grass.reflex.run/",
+      "hidden": false,
+      "reflex_build": true
+    },
+    {
+      "name": "space_dashboard",
+      "description": "A space dashboard app",
+      "demo_url": "https://space-dashboard-blue-ocean.reflex.run/",
+      "hidden": false,
+      "reflex_build": true
+    },
+    {
+      "name": "account_management_dashboard",
+      "description": "An account management dashboard app",
+      "demo_url": "https://account-management-dashboard-neon-star.reflex.run/",
+      "hidden": false,
+      "reflex_build": true
+    },
+    {
+      "name": "stock_market_dashboard",
+      "description": "A stock market dashboard app",
+      "demo_url": "https://stock-market-dashboard-lime-wood.reflex.run/",
+      "hidden": false,
+      "reflex_build": true
+    },
+    {
+      "name": "manufacturing_dashboard",
+      "description": "A manufacturing dashboard app",
+      "demo_url": "https://manufacturing-dashboard-gold-apple.reflex.run/",
+      "hidden": false,
+      "reflex_build": true
+    },
+    {
+      "name": "company_dashboard",
+      "description": "A company dashboard app",
+      "demo_url": "https://company-dashboard-navy-book.reflex.run/",
+      "hidden": false,
+      "reflex_build": true
+    },
+    {
+      "name": "futuristic_dashboard",
+      "description": "A futuristic dashboard app",
+      "demo_url": "https://futuristic-dashboard-gold-orca.reflex.run",
+      "hidden": false,
+      "reflex_build": true
+    },
+    {
+      "name": "chat_app",
+      "description": "A chat app",
+      "demo_url": "https://chat-app-gold-book.reflex.run/",
+      "hidden": false,
+      "reflex_build": true
+    },
+    {
+      "name": "text_annotation_app",
+      "description": "A text annotation app",
+      "demo_url": "https://text-annotation-app-aqua-grass.reflex.run/",
+      "hidden": false,
+      "reflex_build": true
+    },
+    {
+      "name": "stock_graph_app",
+      "description": "A stock graph app",
+      "demo_url": "https://stock-graph-app-neon-ring.reflex.run/",
+      "hidden": false,
+      "reflex_build": true
+    },
+    {
+      "name": "admin_panel",
+      "description": "An admin panel app",
+      "demo_url": "https://admin-panel-lime-book.reflex.run/",
+      "hidden": false,
+      "reflex_build": true
+    },
+    {
+      "name": "retail_dashboard",
+      "description": "A retail dashboard app",
+      "demo_url": "https://retail-dashboard-navy-wood.reflex.run/",
+      "hidden": false,
+      "reflex_build": true
+    }
+  ]
+}

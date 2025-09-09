@@ -1,0 +1,82 @@
+version: '3.8'
+
+services:
+  dagster:
+    image: dagster-dagster-simple:latest
+    container_name: ecoanp_dagster
+    restart: unless-stopped
+    environment:
+      - DAGSTER_HOME=/opt/dagster/dagster_home
+      - DAGSTER_WEBSERVER_HOST=0.0.0.0
+      - DAGSTER_WEBSERVER_PORT=3000
+      # Local TimescaleDB connection
+      - TS_DSN=postgresql://ecoanp_user:ecoanp_password@ecoanp_timescaledb:5432/ecoanp
+      - POSTGRES_CONNECTION_STRING=postgresql://ecoanp_user:ecoanp_password@ecoanp_timescaledb:5432/ecoanp
+      # InfluxDB connection (remote)
+      - INFLUX_URL=http://192.168.1.80:8086
+      - INFLUX_TOKEN=vFq54W9Y0FoUvVIO9suUeeZYmxhYwAGsA3pdxRfFqeNLBrNTybpiyIZ5qWHoOCSRgWB23eXTPmnn-Uqz6yAQvw==
+      - INFLUX_ORG=EON
+      - INFLUX_RAW_BUCKET=5603a3eb-89e2-4e15-8cbb-60750c6588d3_raw
+      - INFLUX_META_BUCKET=5603a3eb-89e2-4e15-8cbb-60750c6588d3_meta
+      - INFLUX_MEASUREMENT=*
+      - INFLUX_RANGE=15s  # 10초 수집 주기 + 5초 버퍼
+      - INGEST_LIMIT=0
+      - DRY_RUN=false
+    volumes:
+      - ./dagster:/opt/dagster/app
+      - ./dagster/dagster_home:/opt/dagster/dagster_home
+      - ./dagster/workspace.yaml:/opt/dagster/dagster_home/workspace.yaml
+    command: ["dagster", "dev", "-h", "0.0.0.0", "-p", "3000", "-w", "/opt/dagster/dagster_home/workspace.yaml"]
+    ports:
+      - "3000:3000"
+    networks:
+      - ecoanp_network
+    deploy:
+      resources:
+        limits:
+          memory: 4G
+          cpus: '2.0'
+        reservations:
+          memory: 2G
+          cpus: '1.0'
+
+  dagster-daemon:
+    image: dagster-dagster-simple:latest
+    container_name: ecoanp_dagster_daemon
+    restart: unless-stopped
+    environment:
+      - DAGSTER_HOME=/opt/dagster/dagster_home
+      # Local TimescaleDB connection
+      - TS_DSN=postgresql://ecoanp_user:ecoanp_password@ecoanp_timescaledb:5432/ecoanp
+      - POSTGRES_CONNECTION_STRING=postgresql://ecoanp_user:ecoanp_password@ecoanp_timescaledb:5432/ecoanp
+      # InfluxDB connection (remote)
+      - INFLUX_URL=http://192.168.1.80:8086
+      - INFLUX_TOKEN=vFq54W9Y0FoUvVIO9suUeeZYmxhYwAGsA3pdxRfFqeNLBrNTybpiyIZ5qWHoOCSRgWB23eXTPmnn-Uqz6yAQvw==
+      - INFLUX_ORG=EON
+      - INFLUX_RAW_BUCKET=5603a3eb-89e2-4e15-8cbb-60750c6588d3_raw
+      - INFLUX_META_BUCKET=5603a3eb-89e2-4e15-8cbb-60750c6588d3_meta
+      - INFLUX_MEASUREMENT=*
+      - INFLUX_RANGE=15s  # 10초 수집 주기 + 5초 버퍼
+      - INGEST_LIMIT=0
+      - DRY_RUN=false
+    volumes:
+      - ./dagster:/opt/dagster/app
+      - ./dagster/dagster_home:/opt/dagster/dagster_home
+      - ./dagster/workspace.yaml:/opt/dagster/dagster_home/workspace.yaml
+    command: ["dagster-daemon", "run", "-w", "/opt/dagster/dagster_home/workspace.yaml"]
+    networks:
+      - ecoanp_network
+    depends_on:
+      - dagster
+    deploy:
+      resources:
+        limits:
+          memory: 2G
+          cpus: '1.0'
+        reservations:
+          memory: 1G
+          cpus: '0.5'
+
+networks:
+  ecoanp_network:
+    external: true

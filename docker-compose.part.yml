@@ -1,0 +1,28 @@
+version: '3.8'
+
+services:
+  reflex-app:
+    build: .
+    container_name: reflex-ksys-app-part
+    ports:
+      - "13000:13000"  # Frontend
+      - "13001:13001"  # Backend
+    environment:
+      - TS_DSN=postgresql://postgres:admin@192.168.1.80:5432/EcoAnP?sslmode=disable
+      - POSTGRES_CONNECTION_STRING=postgresql://postgres:admin@192.168.1.80:5432/EcoAnP?sslmode=disable
+      - APP_ENV=production
+      - APP_VERSION=PART
+      - TZ=Asia/Seoul
+    volumes:
+      - ./ksys_app:/app/ksys_app
+      - ./rxconfig.py:/app/rxconfig.py
+      - ./.env:/app/.env
+    networks:
+      - reflex-network
+    restart: unless-stopped
+    extra_hosts:
+      - "host.docker.internal:host-gateway"
+
+networks:
+  reflex-network:
+    driver: bridge

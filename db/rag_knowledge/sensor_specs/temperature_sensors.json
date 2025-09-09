@@ -1,0 +1,50 @@
+{
+  "sensor_type": "temperature",
+  "sensor_range": "D100-D199",
+  "last_updated": "2024-01-15",
+  "knowledge": {
+    "what": {
+      "description": "온도 측정 센서",
+      "measurement_range": {
+        "min": -50,
+        "max": 500,
+        "unit": "°C"
+      },
+      "accuracy": "±0.5°C",
+      "technology": "RTD (Resistance Temperature Detector)"
+    },
+    "why": {
+      "purpose": "프로세스 온도 모니터링 및 제어",
+      "importance": "열 안정성 유지, 품질 관리",
+      "failure_impact": "제품 품질 저하, 안전 위험"
+    },
+    "when": {
+      "calibration_frequency": "quarterly",
+      "replacement_period": "2_years",
+      "response_time": "< 5 seconds"
+    },
+    "where": {
+      "installation_points": ["반응기", "열교환기", "저장 탱크"],
+      "critical_locations": ["D100: 메인 반응기", "D101: 2차 반응기"]
+    },
+    "who": {
+      "maintenance_team": "계측팀",
+      "operation_team": "운전팀",
+      "vendor": "Sensor Tech Co."
+    },
+    "how": {
+      "calibration_method": "3점 교정법 (0°C, 25°C, 100°C)",
+      "installation_procedure": "플랜지 연결, 열전도 컴파운드 사용",
+      "troubleshooting_steps": [
+        "연결 상태 확인",
+        "저항값 측정",
+        "영점 조정"
+      ]
+    }
+  },
+  "thresholds": {
+    "normal": {"min": 20, "max": 80},
+    "warning": {"min": 10, "max": 85},
+    "critical": {"min": 0, "max": 90}
+  }
+}

@@ -1,0 +1,68 @@
+{
+  "issue_type": "high_temperature",
+  "severity": "critical",
+  "last_updated": "2024-01-15",
+  "knowledge": {
+    "what": {
+      "symptoms": [
+        "온도 센서 값 > 85°C",
+        "온도 상승 속도 > 5°C/min",
+        "알람 발생"
+      ],
+      "affected_systems": ["냉각 시스템", "반응기", "안전 시스템"]
+    },
+    "why": {
+      "root_causes": [
+        "냉각 시스템 고장",
+        "과부하 운전",
+        "외부 열원 영향",
+        "센서 오작동"
+      ],
+      "contributing_factors": [
+        "높은 주변 온도",
+        "냉각수 부족",
+        "열교환기 오염"
+      ]
+    },
+    "when": {
+      "occurrence_pattern": "주로 오후 2-4시 피크 시간",
+      "response_time_required": "5분 이내",
+      "escalation_time": "30분"
+    },
+    "where": {
+      "common_locations": ["반응기", "열교환기"],
+      "check_points": [
+        "냉각수 입구/출구",
+        "열교환기 표면",
+        "반응기 재킷"
+      ]
+    },
+    "who": {
+      "primary_response": "운전팀",
+      "support_teams": ["정비팀", "안전팀"],
+      "escalation_chain": [
+        "당직 책임자",
+        "생산 관리자",
+        "공장장"
+      ]
+    },
+    "how": {
+      "immediate_actions": [
+        "부하 감소 운전",
+        "냉각수 유량 증가",
+        "비상 냉각 시스템 가동"
+      ],
+      "diagnostic_steps": [
+        "냉각수 온도 확인",
+        "펌프 작동 상태 점검",
+        "열교환기 효율 확인",
+        "센서 교차 검증"
+      ],
+      "long_term_solutions": [
+        "냉각 시스템 업그레이드",
+        "예비 냉각 라인 설치",
+        "정기 청소 주기 단축"
+      ]
+    }
+  }
+}

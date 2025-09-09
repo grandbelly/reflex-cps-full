@@ -1,0 +1,51 @@
+[
+    {
+        "id": "bucket_discovery_tab",
+        "type": "tab",
+        "label": "버킷 발견",
+        "disabled": false,
+        "info": "모든 버킷을 찾아서 D100 태그가 있는 버킷 발견"
+    },
+    {
+        "id": "inject_buckets",
+        "type": "inject",
+        "z": "bucket_discovery_tab",
+        "name": "모든 버킷 조회",
+        "props": [{"p": "payload"}],
+        "repeat": "",
+        "crontab": "",
+        "once": false,
+        "topic": "",
+        "payload": "find_buckets",
+        "payloadType": "str",
+        "x": 150,
+        "y": 100,
+        "wires": [["query_buckets"]]
+    },
+    {
+        "id": "query_buckets",
+        "type": "function",
+        "z": "bucket_discovery_tab",
+        "name": "버킷 목록 조회",
+        "func": "// 모든 버킷 목록 조회\nmsg.query = `buckets()`;\nreturn msg;",
+        "outputs": 1,
+        "x": 350,
+        "y": 100,
+        "wires": [["debug_buckets"]]
+    },
+    {
+        "id": "debug_buckets",
+        "type": "debug",
+        "z": "bucket_discovery_tab",
+        "name": "버킷 목록",
+        "active": true,
+        "tosidebar": true,
+        "console": true,
+        "complete": "query",
+        "targetType": "msg",
+        "x": 580,
+        "y": 100,
+        "wires": []
+    }
+]
+

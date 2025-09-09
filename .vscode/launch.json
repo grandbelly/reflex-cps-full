@@ -1,0 +1,22 @@
+{
+    "version": "0.2.0",
+    "configurations": [
+        {
+            "name": "Python Debugger: Module",
+            "type": "debugpy",
+            "request": "launch",
+            "module": "reflex",
+            "args": [
+                "run",
+                "--env",
+                "dev"
+            ],
+            "env": {
+                "TS_DSN": "postgresql://postgres:admin@192.168.1.80:5432/EcoAnP?sslmode=disable"
+            },
+            "console": "integratedTerminal",
+            "justMyCode": true,
+            "pythonPath": "${workspaceFolder}/venv/bin/python"
+        }
+    ]
+}

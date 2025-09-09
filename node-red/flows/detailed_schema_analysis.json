@@ -1,0 +1,118 @@
+[
+    {
+        "id": "schema_analysis_tab",
+        "type": "tab",
+        "label": "상세 스키마 분석",
+        "disabled": false,
+        "info": "InfluxDB 스키마의 모든 필드와 metric 정보를 상세 분석"
+    },
+    {
+        "id": "inject_schema_analysis",
+        "type": "inject",
+        "z": "schema_analysis_tab",
+        "name": "스키마 상세 분석 시작",
+        "props": [{"p": "payload"}],
+        "repeat": "",
+        "crontab": "",
+        "once": false,
+        "onceDelay": 0.1,
+        "topic": "",
+        "payload": "analyze_schema",
+        "payloadType": "str",
+        "x": 150,
+        "y": 100,
+        "wires": [["get_full_schema"]]
+    },
+    {
+        "id": "get_full_schema",
+        "type": "function",
+        "z": "schema_analysis_tab",
+        "name": "전체 스키마 조회",
+        "func": "// InfluxDB 메타 버킷에서 모든 스키마 정보 조회\nmsg.query = `\nfrom(bucket:\"5603a3eb-89e2-4e15-8cbb-60750c6588d3_meta\")\n  |> range(start: -90d)\n  |> filter(fn: (r) => r._measurement == \"schema\")\n  |> keep(columns: [\"_time\", \"_field\", \"_value\"])\n  |> sort(columns: [\"_time\"], desc: true)\n`;\nreturn msg;",
+        "outputs": 1,
+        "x": 370,
+        "y": 100,
+        "wires": [["debug_full_schema", "parse_all_fields"]]
+    },
+    {
+        "id": "debug_full_schema",
+        "type": "debug",
+        "z": "schema_analysis_tab",
+        "name": "전체 스키마 원본",
+        "active": true,
+        "tosidebar": true,
+        "console": true,
+        "complete": "payload",
+        "targetType": "msg",
+        "x": 600,
+        "y": 60,
+        "wires": []
+    },
+    {
+        "id": "parse_all_fields",
+        "type": "function",
+        "z": "schema_analysis_tab",
+        "name": "모든 필드 파싱",
+        "func": "// 스키마의 모든 필드 분석\ntry {\n    if (!msg.payload || !Array.isArray(msg.payload)) {\n        node.warn('스키마 데이터가 없습니다');\n        return null;\n    }\n    \n    const analysis = {\n        total_records: msg.payload.length,\n        fields: {},\n        latest_time: null,\n        parsed_schemas: []\n    };\n    \n    for (const record of msg.payload) {\n        const { _time, _field, _value } = record;\n        \n        // 필드별 분류\n        if (!analysis.fields[_field]) {\n            analysis.fields[_field] = {\n                count: 0,\n                latest_time: _time,\n                sample_value: _value\n            };\n        }\n        analysis.fields[_field].count++;\n        \n        // 최신 시간 업데이트\n        if (!analysis.latest_time || _time > analysis.latest_time) {\n            analysis.latest_time = _time;\n        }\n        \n        // JSON 파싱 시도\n        if (_field === 'json') {\n            try {\n                const parsed = JSON.parse(_value);\n                analysis.parsed_schemas.push({\n                    time: _time,\n                    schema: parsed\n                });\n                \n                // RawDataColumns 분석\n                if (parsed.RawDataColumns) {\n                    node.log(`📊 RawDataColumns 발견: ${parsed.RawDataColumns.length}개`);\n                    for (const col of parsed.RawDataColumns) {\n                        node.log(`  - ${col.DataName} (ID: ${col.DataId}, Type: ${col.DataType})`);\n                    }\n                }\n                \n                // 다른 스키마 필드들 확인\n                const schemaKeys = Object.keys(parsed);\n                node.log(`📋 스키마 키들: ${schemaKeys.join(', ')}`);\n                \n                // Metric 정보 찾기\n                if (parsed.Metrics || parsed.metrics) {\n                    node.log('🎯 Metric 정보 발견!');\n                    analysis.metrics_found = parsed.Metrics || parsed.metrics;\n                }\n                \n                // 기타 정보들\n                for (const key of schemaKeys) {\n                    if (key.toLowerCase().includes('metric')) {\n                        node.log(`🔍 Metric 관련 키 발견: ${key}`);\n                        analysis[`metric_${key}`] = parsed[key];\n                    }\n                }\n                \n            } catch (parseError) {\n                node.warn(`JSON 파싱 실패: ${parseError.message}`);\n            }\n        }\n    }\n    \n    msg.payload = analysis;\n    node.log(`✅ 스키마 분석 완료: ${analysis.total_records}개 레코드, ${Object.keys(analysis.fields).length}개 필드`);\n    return msg;\n    \n} catch (error) {\n    node.error('스키마 분석 오류: ' + error.message);\n    return null;\n}",
+        "outputs": 1,
+        "x": 370,
+        "y": 160,
+        "wires": [["debug_parsed_analysis"]]
+    },
+    {
+        "id": "debug_parsed_analysis",
+        "type": "debug",
+        "z": "schema_analysis_tab",
+        "name": "분석 결과",
+        "active": true,
+        "tosidebar": true,
+        "console": true,
+        "complete": "payload",
+        "targetType": "msg",
+        "x": 580,
+        "y": 160,
+        "wires": []
+    },
+    {
+        "id": "inject_metric_search",
+        "type": "inject",
+        "z": "schema_analysis_tab",
+        "name": "Metric 전용 검색",
+        "props": [{"p": "payload"}],
+        "repeat": "",
+        "crontab": "",
+        "once": false,
+        "topic": "",
+        "payload": "search_metrics",
+        "payloadType": "str",
+        "x": 150,
+        "y": 240,
+        "wires": [["search_metric_fields"]]
+    },
+    {
+        "id": "search_metric_fields",
+        "type": "function",
+        "z": "schema_analysis_tab",
+        "name": "Metric 필드 검색",
+        "func": "// Metric 관련 필드들을 직접 검색\nmsg.query = `\nfrom(bucket:\"5603a3eb-89e2-4e15-8cbb-60750c6588d3_meta\")\n  |> range(start: -90d)\n  |> filter(fn: (r) => \n    r._field =~ /.*metric.*/ or \n    r._field =~ /.*Metric.*/ or\n    r._field =~ /.*tag.*/ or\n    r._field =~ /.*Tag.*/ or\n    r._field =~ /.*name.*/ or\n    r._field =~ /.*Name.*/\n  )\n  |> keep(columns: [\"_time\", \"_field\", \"_value\", \"_measurement\"])\n  |> sort(columns: [\"_time\"], desc: true)\n`;\nreturn msg;",
+        "outputs": 1,
+        "x": 370,
+        "y": 240,
+        "wires": [["debug_metric_search"]]
+    },
+    {
+        "id": "debug_metric_search",
+        "type": "debug",
+        "z": "schema_analysis_tab",
+        "name": "Metric 검색 결과",
+        "active": true,
+        "tosidebar": true,
+        "console": true,
+        "complete": "payload",
+        "targetType": "msg",
+        "x": 590,
+        "y": 240,
+        "wires": []
+    }
+]
+

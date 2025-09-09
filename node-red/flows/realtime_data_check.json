@@ -1,0 +1,93 @@
+[
+    {
+        "id": "realtime_check_tab",
+        "type": "tab",
+        "label": "실시간 데이터 확인",
+        "disabled": false,
+        "info": "센서 데이터가 실시간으로 갱신되는지 확인"
+    },
+    {
+        "id": "inject_realtime_check",
+        "type": "inject",
+        "z": "realtime_check_tab",
+        "name": "최근 데이터 확인",
+        "props": [{"p": "payload"}],
+        "repeat": "30",
+        "crontab": "",
+        "once": true,
+        "onceDelay": 0.1,
+        "topic": "",
+        "payload": "check_latest",
+        "payloadType": "str",
+        "x": 150,
+        "y": 100,
+        "wires": [["query_latest_data"]]
+    },
+    {
+        "id": "query_latest_data",
+        "type": "function",
+        "z": "realtime_check_tab",
+        "name": "최근 30분 데이터 조회",
+        "func": "// 최근 30분간 실제 센서 데이터 확인\nconst now = new Date();\nconst timestamp = now.toISOString();\n\nmsg.query = `\nfrom(bucket:\"5603a3eb-89e2-4e15-8cbb-60750c6588d3_raw\")\n  |> range(start:-30m)\n  |> filter(fn: (r) => r._measurement == \"1\")\n  |> group(columns: [\"_field\"])\n  |> last()\n  |> keep(columns: [\"_time\", \"_field\", \"_value\"])\n`;\n\nmsg.timestamp = timestamp;\nreturn msg;",
+        "outputs": 1,
+        "x": 380,
+        "y": 100,
+        "wires": [["debug_latest_data"]]
+    },
+    {
+        "id": "debug_latest_data",
+        "type": "debug",
+        "z": "realtime_check_tab",
+        "name": "최신 센서 데이터",
+        "active": true,
+        "tosidebar": true,
+        "console": true,
+        "complete": "true",
+        "targetType": "full",
+        "x": 620,
+        "y": 100,
+        "wires": []
+    },
+    {
+        "id": "inject_data_count",
+        "type": "inject",
+        "z": "realtime_check_tab",
+        "name": "데이터 개수 확인",
+        "props": [{"p": "payload"}],
+        "repeat": "",
+        "crontab": "",
+        "once": false,
+        "topic": "",
+        "payload": "count_data",
+        "payloadType": "str",
+        "x": 150,
+        "y": 180,
+        "wires": [["query_data_count"]]
+    },
+    {
+        "id": "query_data_count",
+        "type": "function",
+        "z": "realtime_check_tab",
+        "name": "시간대별 데이터 개수",
+        "func": "// 시간대별 데이터 개수 확인 (갱신 빈도 파악)\nmsg.query = `\nfrom(bucket:\"5603a3eb-89e2-4e15-8cbb-60750c6588d3_raw\")\n  |> range(start:-2h)\n  |> filter(fn: (r) => r._measurement == \"1\")\n  |> aggregateWindow(every: 10m, fn: count, createEmpty: false)\n  |> keep(columns: [\"_time\", \"_value\"])\n`;\n\nreturn msg;",
+        "outputs": 1,
+        "x": 370,
+        "y": 180,
+        "wires": [["debug_data_count"]]
+    },
+    {
+        "id": "debug_data_count",
+        "type": "debug",
+        "z": "realtime_check_tab",
+        "name": "데이터 개수",
+        "active": true,
+        "tosidebar": true,
+        "console": true,
+        "complete": "query",
+        "targetType": "msg",
+        "x": 590,
+        "y": 180,
+        "wires": []
+    }
+]
+

@@ -1,0 +1,92 @@
+[
+    {
+        "id": "corrected_tab",
+        "type": "tab",
+        "label": "수정된 InfluxDB 쿼리",
+        "disabled": false,
+        "info": "실제 데이터 구조에 맞춘 올바른 쿼리"
+    },
+    {
+        "id": "inject_corrected",
+        "type": "inject",
+        "z": "corrected_tab",
+        "name": "수정된 데이터 조회",
+        "props": [{"p": "payload"}],
+        "repeat": "",
+        "crontab": "",
+        "once": false,
+        "topic": "",
+        "payload": "start_corrected_query",
+        "payloadType": "str",
+        "x": 150,
+        "y": 100,
+        "wires": [["corrected_query"]]
+    },
+    {
+        "id": "corrected_query",
+        "type": "function",
+        "z": "corrected_tab",
+        "name": "올바른 센서 데이터 쿼리",
+        "func": "// 실제 데이터 구조에 맞는 쿼리\nmsg.query = `\nfrom(bucket:\"5603a3eb-89e2-4e15-8cbb-60750c6588d3_raw\")\n  |> range(start:-1h)\n  |> filter(fn: (r) => r._measurement == \"1\")\n  |> pivot(rowKey: [\"_time\"], columnKey: [\"_field\"], valueColumn: \"_value\")\n  |> limit(n:10)\n`;\nreturn msg;",
+        "outputs": 1,
+        "x": 380,
+        "y": 100,
+        "wires": [["debug_corrected"]]
+    },
+    {
+        "id": "debug_corrected",
+        "type": "debug",
+        "z": "corrected_tab",
+        "name": "수정된 결과",
+        "active": true,
+        "tosidebar": true,
+        "console": true,
+        "complete": "query",
+        "targetType": "msg",
+        "x": 620,
+        "y": 100,
+        "wires": []
+    },
+    {
+        "id": "inject_timescale",
+        "type": "inject",
+        "z": "corrected_tab",
+        "name": "TimescaleDB 변환용",
+        "props": [{"p": "payload"}],
+        "repeat": "",
+        "crontab": "",
+        "once": false,
+        "topic": "",
+        "payload": "start_timescale_convert",
+        "payloadType": "str",
+        "x": 150,
+        "y": 200,
+        "wires": [["timescale_convert"]]
+    },
+    {
+        "id": "timescale_convert",
+        "type": "function",
+        "z": "corrected_tab",
+        "name": "TimescaleDB 변환 함수",
+        "func": "// InfluxDB 데이터를 TimescaleDB 형태로 변환\nconst influxData = [\n  {\n    _time: '2025-09-03T09:17:52.864006Z',\n    _measurement: '1',\n    _field: '2',\n    _value: 1\n  },\n  {\n    _time: '2025-09-03T09:17:52.864006Z',\n    _measurement: '1',\n    _field: '3',\n    _value: 301\n  }\n];\n\n// TimescaleDB INSERT 쿼리 생성\nconst sqlQueries = [];\n\nfor (const item of influxData) {\n  if (item._time && item._field && item._value !== undefined) {\n    const sql = `\n      INSERT INTO sensor_data (timestamp, tag_name, value) \n      VALUES ('${item._time}', 'sensor_${item._field}', ${item._value})\n      ON CONFLICT (timestamp, tag_name) \n      DO UPDATE SET value = EXCLUDED.value;\n    `;\n    sqlQueries.push(sql.trim());\n  }\n}\n\nmsg.payload = {\n  queries: sqlQueries,\n  count: sqlQueries.length\n};\n\nreturn msg;",
+        "outputs": 1,
+        "x": 380,
+        "y": 200,
+        "wires": [["debug_timescale"]]
+    },
+    {
+        "id": "debug_timescale",
+        "type": "debug",
+        "z": "corrected_tab",
+        "name": "TimescaleDB SQL",
+        "active": true,
+        "tosidebar": true,
+        "console": true,
+        "complete": "payload",
+        "targetType": "msg",
+        "x": 620,
+        "y": 200,
+        "wires": []
+    }
+]
+

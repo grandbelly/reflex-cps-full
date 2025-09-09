@@ -1,0 +1,62 @@
+[
+    {
+        "id": "debug_flow_tab",
+        "type": "tab",
+        "label": "디버그 전용 플로우",
+        "disabled": false,
+        "info": "메시지 손실 없이 디버그하기 위한 전용 플로우"
+    },
+    {
+        "id": "debug_inject",
+        "type": "inject",
+        "z": "debug_flow_tab",
+        "name": "테스트 메시지",
+        "props": [
+            {
+                "p": "payload"
+            }
+        ],
+        "repeat": "",
+        "crontab": "",
+        "once": false,
+        "onceDelay": 0.1,
+        "topic": "",
+        "payload": "{\"test\": \"message\", \"timestamp\": \"$now\"}",
+        "payloadType": "json",
+        "x": 140,
+        "y": 100,
+        "wires": [["debug_file", "debug_console"]]
+    },
+    {
+        "id": "debug_file",
+        "type": "file",
+        "z": "debug_flow_tab",
+        "name": "파일 저장",
+        "filename": "/data/debug.log",
+        "appendNewline": true,
+        "createDir": false,
+        "overwriteFile": "false",
+        "encoding": "utf8",
+        "x": 380,
+        "y": 80,
+        "wires": [[]]
+    },
+    {
+        "id": "debug_console",
+        "type": "debug",
+        "z": "debug_flow_tab",
+        "name": "콘솔 출력",
+        "active": true,
+        "tosidebar": true,
+        "console": true,
+        "tostatus": false,
+        "complete": "payload",
+        "targetType": "msg",
+        "statusVal": "",
+        "statusType": "auto",
+        "x": 380,
+        "y": 120,
+        "wires": []
+    }
+]
+

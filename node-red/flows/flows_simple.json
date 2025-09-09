@@ -1,0 +1,69 @@
+[
+    {
+        "id": "simple_test_flow",
+        "type": "tab",
+        "label": "간단한 테스트 플로우",
+        "disabled": false,
+        "info": "TimescaleDB 연결 테스트용 간단한 플로우"
+    },
+    {
+        "id": "test_inject",
+        "type": "inject",
+        "z": "simple_test_flow",
+        "name": "테스트 데이터",
+        "props": [
+            {
+                "p": "payload"
+            }
+        ],
+        "repeat": "",
+        "crontab": "",
+        "once": false,
+        "onceDelay": 0.1,
+        "topic": "",
+        "payload": "{\"sensor_id\": \"test_001\", \"value\": 25.5, \"timestamp\": \"2025-09-03T09:00:00Z\"}",
+        "payloadType": "json",
+        "x": 140,
+        "y": 100,
+        "wires": [["debug_output"]]
+    },
+    {
+        "id": "debug_output",
+        "type": "debug",
+        "z": "simple_test_flow",
+        "name": "디버그 출력",
+        "active": true,
+        "tosidebar": true,
+        "console": false,
+        "tostatus": false,
+        "complete": "payload",
+        "targetType": "msg",
+        "statusVal": "",
+        "statusType": "auto",
+        "x": 380,
+        "y": 100,
+        "wires": []
+    },
+    {
+        "id": "timescale_test",
+        "type": "inject",
+        "z": "simple_test_flow",
+        "name": "TimescaleDB 테스트",
+        "props": [
+            {
+                "p": "payload"
+            }
+        ],
+        "repeat": "",
+        "crontab": "",
+        "once": false,
+        "onceDelay": 0.1,
+        "topic": "",
+        "payload": "SELECT version();",
+        "payloadType": "str",
+        "x": 140,
+        "y": 180,
+        "wires": [["debug_output"]]
+    }
+]
+
